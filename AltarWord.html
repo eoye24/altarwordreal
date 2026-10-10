@@ -630,7 +630,7 @@ select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+x
         <button class="btn btn-gold" id="gen-qr" style="width:100%;margin-bottom:14px">Generate QR Code</button>
         <div id="remote-qr-wrap" class="hidden">
           <div class="lbl" style="margin-bottom:8px">Step 3 — Scan with your phone camera</div>
-          <div id="qr-code" style="margin:0 auto 12px;width:fit-content;background:#fff;padding:10px;border-radius:8px"></div>
+          <div id="qr-code" style="margin:0 auto 12px;width:fit-content;max-width:100%;background:#fff;padding:14px;border-radius:8px;overflow:hidden"></div>
           <div id="remote-url-txt" style="font-size:10px;color:var(--txt3);word-break:break-all;margin-bottom:8px;padding:8px;background:var(--bg-input);border-radius:4px;font-family:monospace;line-height:1.5"></div>
           <button class="btn btn-ghost" id="copy-remote-url" style="width:100%;font-size:12px">📋 Copy URL</button>
         </div>
@@ -1701,14 +1701,14 @@ function initCtrl(){
     const u=new URL(base);
     if(!u.pathname.endsWith('.html'))u.pathname=u.pathname.replace(/\/$/,'')+'/AltarWordRemote.html';
     u.search='';
-    u.search=new URLSearchParams({fk:cfg.apiKey||'',fu:cfg.databaseURL||'',fp:cfg.projectId||'',fa:cfg.authDomain||''}).toString();u.hash='';
+    u.search=new URLSearchParams({fu:cfg.databaseURL||''}).toString();u.hash='';
     const url=u.href;
     document.getElementById('remote-qr-wrap')?.classList.remove('hidden');
     document.getElementById('remote-url-txt').textContent=url;
     const qrEl=document.getElementById('qr-code');
     qrEl.innerHTML='';
     if(typeof QRCode!=='undefined'){
-      new QRCode(qrEl,{text:url,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      new QRCode(qrEl,{text:url,width:320,height:320,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L});
     }else{
       qrEl.innerHTML='<div style="color:var(--danger);font-size:12px;padding:8px">QR library not loaded. Copy the URL below instead.</div>';
     }

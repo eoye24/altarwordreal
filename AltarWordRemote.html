@@ -236,9 +236,9 @@ let _ws=null; // retained for compatibility
 
 function getCfg(){
   const p=remoteParams;
-  const fk=p.get('fk'),fu=p.get('fu');
-  if(!fk||!fu)return null;
-  return{apiKey:fk,databaseURL:fu,projectId:p.get('fp')||'',authDomain:p.get('fa')||''};
+  const fu=p.get('fu');
+  if(!fu)return null;
+  return{databaseURL:fu};
 }
 
 function firebaseBase(){
@@ -588,16 +588,23 @@ function refreshRemoteConnection(){
 }
 async function prepareOffline(){
  const badge=document.getElementById('offline-detail');
- if(!('serviceWorker' in navigator)||location.protocol!=='https:'){if(badge)badge.textContent='Install/cache unavailable';return;}
+ if(!('serviceWorker' in navigator)||location.protocol!=='https:'){if(badge)badge.textContent='PWA install unavailable in this browser';return;}
  try{
-   const reg=await navigator.serviceWorker.register('remote-sw.js');
-   await navigator.serviceWorker.ready;
+   if(badge)badge.textContent='Preparing app cache…';
+   const reg=await navigator.serviceWorker.register('./remote-sw.js',{scope:'./'});
+   const ready = await Promise.race([
+     navigator.serviceWorker.ready,
+     new Promise((_,reject)=>setTimeout(()=>reject(new Error('service worker timeout')),8000))
+   ]);
    reg.update().catch(()=>{});
    setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
-   if(badge)badge.textContent='App cached for faster launch · internet still required';
+   if(badge)badge.textContent='PWA ready · internet required for Firebase';
  }
- catch(e){if(badge)badge.textContent='App cache not ready. Open once with internet and try again.';}
+ catch(e){
+   console.error('PWA setup:',e);
+   if(badge)badge.textContent='PWA cache unavailable · remote still works online';
+ }
 }
 window.addEventListener('DOMContentLoaded',()=>{
   init();prepareOffline();setInterval(refreshRemoteConnection,1000);
