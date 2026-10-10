@@ -650,7 +650,7 @@ function refreshRemoteConnection(){
  if(localReady)setConn(true,cloud?'Local Wi-Fi · Firebase ready':'Local Wi-Fi');
  else if(cloud)setConn(true,'Firebase');
  else if(cloudReady)setConn(false,'Reconnecting');
- else setConn(false,'Offline');
+ else setConn(false,'Offline · checking local/Firebase');
  const status=document.getElementById('auto-detail');
  if(status)status.textContent=localReady?'Using local Wi-Fi first':cloud?'Using Firebase internet bridge':'Searching for host laptop';
 }
