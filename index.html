@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0a10">
+<link rel="manifest" href="remote.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>AltarWord</title>
+<script>
+(function(){
+  const p = new URLSearchParams(location.search);
+  const forced = p.get('mode');
+  const phoneUA = /Android|iPhone|iPod|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent || '');
+  const narrowTouch = matchMedia('(max-width: 820px)').matches && (navigator.maxTouchPoints || 0) > 0;
+  const isPhone = phoneUA || narrowTouch;
+  const target = forced ? 'AltarWord.html' : (isPhone ? 'AltarWordRemote.html' : 'AltarWord.html');
+  const u = new URL(target, location.href);
+  u.search = location.search;
+  u.hash = location.hash;
+  location.replace(u.href);
+})();
+</script>
+<noscript><meta http-equiv="refresh" content="0; url=AltarWord.html"></noscript>
+</head>
+<body style="background:#0a0a10;color:#e8e0d0;font-family:system-ui,sans-serif">Opening AltarWord…</body>
+</html>

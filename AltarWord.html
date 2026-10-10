@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="theme-color" content="#0a0a10">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="remote.webmanifest">
+<link rel="stylesheet" href="vendor/fonts.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AltarWord</title>
+<script>
+/* AW_MOBILE_AUTO_ROUTE */
+(function(){
+  const q=new URLSearchParams(location.search);
+  if(q.has('mode')) return;
+  const phoneUA=/Android|iPhone|iPod|IEMobile|Opera Mini|Mobile/i.test(navigator.userAgent||'');
+  const narrowTouch=matchMedia('(max-width: 820px)').matches && (navigator.maxTouchPoints||0)>0;
+  if(!(phoneUA||narrowTouch)) return;
+  const u=new URL('AltarWordRemote.html',location.href);
+  u.search=location.search;u.hash=location.hash;
+  location.replace(u.href);
+})();
+</script>
+<style>
+.aw-bg{position:relative;isolation:isolate}
+.aw-bg::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:var(--aw-bg);opacity:var(--aw-alpha,1)}
+
+:root{--gold:#C9A84C;--gold-dim:#C9A84C88;--gold-faint:#C9A84C18;--bg:#0a0a10;--bg-panel:#111118;--bg-card:#16161f;--bg-input:#1c1c28;--border:#ffffff0c;--border-hi:#C9A84C44;--txt:#e8e0d0;--txt2:#888;--txt3:#4a4a5a;--danger:#e05555;--ok:#4caf7d;--r:8px;--rs:5px;--rl:14px;--ui:'Inter',system-ui,sans-serif;--display:'Cinzel',serif;--verse:'Lora',Georgia,serif}
+.light{--bg:#f0f0f6;--bg-panel:#e4e4ee;--bg-card:#ffffff;--bg-input:#e8e8f2;--border:#00000010;--border-hi:#C9A84C55;--txt:#1a1a2e;--txt2:#555;--txt3:#999}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ui);background:var(--bg);color:var(--txt);overflow:hidden;height:100vh;transition:background .2s,color .2s}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#ffffff18;border-radius:2px}
+.hidden{display:none!important}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:var(--rs);font-family:var(--ui);font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;padding:8px 14px;white-space:nowrap}
+.btn-gold{background:var(--gold);color:#09080e}.btn-gold:hover{background:#d4b255}
+.btn-ghost{background:transparent;color:var(--txt2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg-input);color:var(--txt)}
+.btn-danger{background:#e0555518;color:var(--danger);border:1px solid #e0555528}.btn-danger:hover{background:#e0555530}
+.ico{padding:7px;border-radius:var(--rs);background:transparent;border:none;color:var(--txt2);cursor:pointer;transition:all .18s;font-size:15px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.ico:hover{background:var(--bg-input);color:var(--txt)}
+.inp{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt);font-family:var(--ui);font-size:13px;padding:8px 11px;transition:border-color .18s;width:100%;outline:none}
+.inp:focus{border-color:var(--border-hi)}
+select.inp{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px}
+.lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:5px;display:block}
+.tog{width:34px;height:19px;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;position:relative;transition:all .2s;flex-shrink:0;cursor:pointer;flex-shrink:0}
+.tog::after{content:'';position:absolute;width:13px;height:13px;border-radius:50%;background:var(--txt3);top:2px;left:2px;transition:all .2s}
+.tog.on{background:var(--gold-faint);border-color:var(--gold-dim)}.tog.on::after{background:var(--gold);left:17px}
+.divider{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.sh{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;margin-top:16px;font-family:var(--display)}
+.sh:first-child{margin-top:0}
+
+/* ── CONTROLLER ── */
+#ctrl{display:flex;flex-direction:column;height:100vh}
+.ctrl-hd{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.logo{font-family:var(--display);font-size:15px;font-weight:600;color:var(--gold);letter-spacing:.12em}
+.conn{width:7px;height:7px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:background .3s}
+.conn.ok{background:var(--ok)}.conn.err{background:var(--danger)}
+/* 3-column layout */
+.ctrl-body{display:flex;flex:1;overflow:hidden}
+.ctrl-left{width:20%;min-width:220px;max-width:360px;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.ctrl-left-inner{flex:1;overflow-y:auto;padding:12px}
+.ctrl-mid{flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-width:280px}
+.ctrl-right{width:20%;min-width:250px;max-width:380px;overflow-y:auto;padding:12px;flex-shrink:0}
+/* Chapter view */
+.cv-hd{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.cv-title{font-family:var(--display);font-size:13px;font-weight:600;color:var(--gold);letter-spacing:.1em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-tr-lbl{font-size:10px;color:var(--txt3);letter-spacing:.06em;white-space:nowrap}
+.cv-ch-btn{padding:4px 9px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--txt2);cursor:pointer;font-size:13px;transition:all .15s;flex-shrink:0}
+.cv-ch-btn:hover{background:var(--bg-card);color:var(--txt)}
+.cv-list{flex:1;overflow-y:auto;padding:4px 0}
+.cv-item{display:flex;gap:11px;padding:8px 13px;cursor:pointer;transition:background .12s;border-left:3px solid transparent}
+.cv-item:hover{background:var(--bg-input)}
+.cv-item.live{background:var(--gold-faint);border-left-color:var(--gold)}
+.cv-item.live-range{background:#C9A84C0c;border-left-color:var(--gold-dim)}
+.cv-vn{font-family:var(--display);font-size:10px;color:var(--txt3);flex-shrink:0;width:26px;padding-top:3px;letter-spacing:.04em;text-align:right}
+.cv-item.live .cv-vn{color:var(--gold)}
+.cv-vt{font-family:var(--verse);font-size:13px;line-height:1.58;color:var(--txt2)}
+.cv-item.live .cv-vt{color:var(--txt);font-weight:500}
+.cv-empty{padding:18px 13px;font-size:13px;color:var(--txt3)}
+/* Left nav */
+.bcv{display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:8px}
+.qr-wrap{display:flex;gap:5px;margin-bottom:4px}
+.qr-hint{font-size:10px;color:var(--txt3);margin-bottom:12px;line-height:1.4}
+.tc{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.tch{font-size:11px;padding:4px 9px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--rs);color:var(--txt2);cursor:pointer;transition:all .15s;font-family:var(--display);letter-spacing:.06em;display:inline-flex;align-items:center;gap:4px}
+.tch.on{background:var(--gold-faint);border-color:var(--border-hi);color:var(--gold)}
+.tch-rm{font-size:9px;color:var(--txt3);cursor:pointer;padding:1px 2px;border-radius:2px;transition:color .12s;line-height:1}
+.tch-rm:hover{color:var(--danger)}
+.recent-row{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.chip{font-size:10px;padding:3px 8px;background:var(--bg-input);border:1px solid var(--border);border-radius:20px;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:var(--display);letter-spacing:.04em}
+.chip:hover{border-color:var(--border-hi);color:var(--gold)}
+/* Toolbar */
+.ctrl-tb{display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--bg-panel);border-top:1px solid var(--border);flex-shrink:0}
+.btn-sh{flex:1;padding:11px;font-size:13px;font-weight:700;letter-spacing:.1em;border-radius:var(--r);font-family:var(--display);border:none;cursor:pointer;transition:all .2s}
+.btn-sh.showing{background:var(--danger);color:#fff}.btn-sh.hiding{background:var(--gold);color:#09080e}
+.btn-nav{padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);color:var(--txt2);font-size:16px;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center}
+.btn-nav:hover{background:var(--bg-input);color:var(--txt)}
+
+/* ── SETTINGS ── */
+.stabs{display:flex;flex-wrap:wrap;gap:3px;background:var(--bg-input);padding:3px;border-radius:var(--rs);margin-bottom:12px}
+.stab{flex:1;padding:5px 6px;border:none;border-radius:4px;background:transparent;color:var(--txt3);font-size:10px;font-weight:500;cursor:pointer;transition:all .18s;font-family:var(--ui);letter-spacing:.02em;white-space:nowrap}
+.stab.on{background:var(--bg-card);color:var(--gold)}
+.spane{display:none}.spane.on{display:block}
+.cr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.csw{width:28px;height:28px;border-radius:4px;border:1px solid var(--border);cursor:pointer;overflow:hidden;flex-shrink:0}
+.csw input[type=color]{width:200%;height:200%;margin:-50%;border:none;cursor:pointer}
+.clbl{font-size:12px;color:var(--txt2);flex:1}
+.fc{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.abts{display:flex;gap:3px}
+.abt{flex:1;padding:5px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-size:11px;cursor:pointer;transition:all .15s;text-align:center}
+.abt.on{background:var(--gold-faint);border-color:var(--border-hi);color:var(--gold)}
+.bgt-row{display:flex;gap:4px;margin-bottom:8px}
+.bgt{flex:1;padding:5px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-size:11px;cursor:pointer;text-align:center;transition:all .15s}
+.bgt.on{background:var(--gold-faint);border-color:var(--border-hi);color:var(--gold)}
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
+.tcard{border-radius:var(--rs);overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .18s}
+.tcard.on{border-color:var(--gold)}
+.tprev{height:32px;display:flex;align-items:flex-end;padding:3px}
+.tbar{height:9px;border-radius:3px;width:100%}
+.tname{font-size:9px;text-align:center;padding:3px;background:var(--bg-input);color:var(--txt3);letter-spacing:.04em}
+
+/* ── MODALS ── */
+.moverlay{position:fixed;inset:0;background:#000a;backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.moverlay.hidden{display:none}
+.modal{background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:var(--rl);width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px #0009}
+.mhd{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.mtitle{font-family:var(--display);font-size:13px;font-weight:600;color:var(--gold);letter-spacing:.1em}
+.mbody{flex:1;overflow-y:auto;padding:16px}
+.mfoot{padding:11px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0}
+.sr-list{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.sr-item{padding:9px 11px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;transition:all .15s}
+.sr-item:hover{border-color:var(--border-hi)}
+.sr-ref{font-family:var(--display);font-size:10px;color:var(--gold);letter-spacing:.1em;margin-bottom:3px}
+.sr-txt{font-size:13px;color:var(--txt);line-height:1.5}
+.sr-txt mark{background:var(--gold-faint);color:var(--gold);border-radius:2px;padding:0 2px}
+.sr-tr{font-size:10px;color:var(--txt3);margin-top:2px}
+.qi{display:flex;align-items:center;gap:6px;padding:8px 11px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:5px;cursor:pointer;transition:all .15s}
+.qi:hover{border-color:var(--border-hi)}.qi.on{border-color:var(--gold);background:var(--gold-faint)}
+.qi-ref{font-family:var(--display);font-size:12px;color:var(--gold);letter-spacing:.06em;flex:1}
+.qi-tr{font-size:11px;color:var(--txt3)}
+
+/* ── DISPLAY ── */
+.portrait-passage{flex:1;min-height:0;min-width:0;overflow:hidden;display:flex;align-items:center}
+.portrait-text{width:100%;line-height:1.4;overflow-wrap:anywhere}
+.portrait-passage + .portrait-passage{border-top:1px solid #8885;padding-top:16px}
+#disp{width:1920px;height:1080px;position:relative;overflow:hidden;background:transparent}
+.d-overlay{position:absolute;transition:opacity .45s ease}
+.d-overlay.off{opacity:0;pointer-events:none}
+.d-lower{bottom:0;left:0;right:0}
+.d-full{inset:0;position:absolute;display:flex;flex-direction:column}
+.d-full.tl{align-items:flex-start;justify-content:flex-start}
+.d-full.tc{align-items:center;justify-content:flex-start}
+.d-full.tr{align-items:flex-end;justify-content:flex-start}
+.d-full.bl{align-items:flex-start;justify-content:flex-end}
+.d-full.bc{align-items:center;justify-content:flex-end}
+.d-full.br{align-items:flex-end;justify-content:flex-end}
+/* Folder tab — tab shrinks to reference text width */
+.ft-outer{display:flex;flex-direction:column;width:100%}
+.ft-tab{display:inline-block;padding:6px 20px;border-radius:6px 6px 0 0;font-family:var(--display);letter-spacing:.14em;line-height:1;white-space:nowrap;align-self:flex-start}
+.ft-body{width:100%;position:relative;border-radius:0 8px 8px 8px}
+.ft-verse{margin-bottom:10px}
+.vl{display:block;margin-bottom:4px}.vl:last-child{margin-bottom:0}
+.vn{font-size:.7em;vertical-align:super;opacity:.65;margin-right:3px}
+.ft-trans{font-style:italic;opacity:.75}
+/* Clean card */
+.cc-body{position:relative;border-radius:8px}
+.cc-ref{font-family:var(--display);letter-spacing:.16em;margin-bottom:10px}
+.cc-verse{margin-bottom:8px}
+.cc-trans{font-style:italic;opacity:.7;margin-top:8px}
+/* Parallel */
+.par-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+/* Animations */
+@keyframes aw-fade{from{opacity:0}to{opacity:1}}
+@keyframes aw-up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes aw-left{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:translateX(0)}}
+@keyframes aw-right{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:translateX(0)}}
+@keyframes aw-blur{from{opacity:0;filter:blur(14px)}to{opacity:1;filter:blur(0)}}
+.a-fade{animation:aw-fade .5s ease both}
+.a-up{animation:aw-up .5s ease both}
+.a-left{animation:aw-left .5s ease both}
+.a-right{animation:aw-right .5s ease both}
+.a-blur{animation:aw-blur .55s ease both}
+
+
+
+/* ── REMOTE ── */
+#rem{display:flex;flex-direction:column;height:100vh;background:var(--bg);max-width:500px;margin:0 auto}
+.rem-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.rem-logo{font-family:var(--display);font-size:13px;color:var(--gold);letter-spacing:.12em}
+.rem-cv{padding:11px 14px;background:var(--bg-card);border-bottom:1px solid var(--border);flex-shrink:0}
+.rem-ref{font-family:var(--display);font-size:11px;color:var(--gold);letter-spacing:.12em;margin-bottom:4px}
+.rem-vt{font-family:var(--verse);font-size:14px;line-height:1.55;color:var(--txt);max-height:72px;overflow:hidden}
+.rem-tr{font-size:11px;color:var(--txt3);margin-top:3px;font-style:italic}
+.rem-ctrl{display:grid;grid-template-columns:1fr 2fr 1fr;gap:7px;padding:10px 14px;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.rem-nav{padding:17px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);color:var(--txt2);font-size:20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.rem-nav:active{transform:scale(.95)}
+.rem-sh{padding:17px;border-radius:var(--r);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:.1em;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.rem-sh.showing{background:var(--danger);color:#fff}.rem-sh.hiding{background:var(--gold);color:#09080e}
+.rem-sh:active{transform:scale(.97)}
+.rem-tabs{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.rem-tab{flex:1;padding:9px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--txt3);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;text-align:center;font-family:var(--ui)}
+.rem-tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.rem-content{flex:1;overflow-y:auto;padding:12px 14px}
+.rem-pane{display:none}.rem-pane.on{display:block}
+
+/* ── ONBOARDING ── */
+.ob-ov{position:fixed;inset:0;background:#000c;backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.ob-ov.hidden{display:none}
+.ob-card{background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:var(--rl);width:100%;max-width:460px;padding:28px;text-align:center;box-shadow:0 24px 80px #0009}
+.ob-dots{display:flex;justify-content:center;gap:5px;margin-bottom:20px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--txt3);transition:all .2s}
+.ob-dot.on{background:var(--gold);width:18px;border-radius:3px}
+.ob-icon{font-size:36px;margin-bottom:12px}
+.ob-title{font-family:var(--display);font-size:18px;font-weight:600;color:var(--gold);letter-spacing:.08em;margin-bottom:9px}
+.ob-txt{font-size:13px;color:var(--txt2);line-height:1.65;margin-bottom:20px}
+.ob-foot{display:flex;justify-content:space-between;align-items:center}
+.ob-skip{background:none;border:none;color:var(--txt3);font-size:12px;cursor:pointer;font-family:var(--ui)}
+</style>
+</head>
+<body>
+
+<!-- ═══ CONTROLLER ═══ -->
+<div id="ctrl" class="hidden">
+  <div class="ctrl-hd">
+    <span class="logo">AltarWord</span>
+    <div class="conn" id="conn-dot"></div>
+    <span style="font-size:11px;color:var(--txt3)" id="conn-lbl">Connecting…</span>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:6px;cursor:pointer" id="par-wrap">
+      <div class="tog" id="par-tog"></div>
+      <span style="font-size:12px;color:var(--txt2)">Parallel</span>
+    </div>
+    <select class="inp" id="par-sel" style="width:90px;display:none;font-size:12px;padding:5px 22px 5px 8px"></select>
+    <div class="divider" style="margin:0 5px"></div>
+    <button class="ico" id="btn-theme">🌙</button>
+    <button class="ico" id="btn-search" title="Search (Ctrl+F)">🔍</button>
+    <button class="ico" id="btn-queue" title="Queue">📋</button>
+    <button class="ico" id="btn-remote" title="Phone Remote Setup">📱</button>
+    <button class="ico" id="btn-firebase" title="Sync Setup">🔗</button>
+    <button class="ico" id="btn-about" title="About">ℹ️</button>
+  </div>
+
+  <div class="ctrl-body">
+    <!-- ── LEFT: NAV ── -->
+    <div class="ctrl-left">
+      <div class="ctrl-left-inner">
+
+        <div class="sh">Navigate</div>
+        <div class="bcv">
+          <div><div class="lbl">Book</div><select class="inp" id="sel-book"></select></div>
+          <div><div class="lbl">Chapter</div><select class="inp" id="sel-ch"></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:5px;align-items:center;margin-bottom:8px">
+          <div><div class="lbl">Verse From</div><select class="inp" id="sel-vs"></select></div>
+          <span style="color:var(--txt3);font-size:11px;padding-top:14px;text-align:center">→</span>
+          <div><div class="lbl">Verse To</div><select class="inp" id="sel-ve"></select></div>
+        </div>
+        <button class="btn btn-gold" style="width:100%;margin-bottom:12px;font-size:12px" id="nav-go">Go Live ↑</button>
+
+        <div class="sh">Quick Reference</div>
+        <div class="qr-wrap">
+          <input type="text" class="inp" id="qr-inp" placeholder="jn 3 16">
+          <button class="btn btn-gold" id="qr-go" style="padding:7px 10px;font-size:12px">Go</button>
+        </div>
+        <div class="qr-hint">Press Enter to go live. Range: jn 3 13 15</div>
+
+        <div class="sh">Translations</div>
+        <div class="tc" id="tc-main"></div>
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:12px;font-size:12px" id="btn-load-trans">+ Load Bible File</button>
+        <input type="file" id="file-trans" accept=".xml" multiple style="display:none">
+
+        <div class="sh">Recently Viewed</div>
+        <div class="recent-row" id="recent-row">
+          <span style="font-size:11px;color:var(--txt3)">None yet</span>
+        </div>
+
+        <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12px" id="btn-copy">📋 Copy Verse</button>
+
+      </div>
+    </div>
+
+    <!-- ── MIDDLE: CHAPTER VIEW ── -->
+    <div class="ctrl-mid">
+      <div class="cv-hd">
+        <button class="cv-ch-btn" id="cv-prev-ch">◀</button>
+        <span class="cv-title" id="cv-title">—</span>
+        <button class="cv-ch-btn" id="cv-next-ch">▶</button>
+        <span class="cv-tr-lbl" id="cv-tr-lbl"></span>
+      </div>
+      <div class="cv-list" id="cv-list">
+        <div class="cv-empty">Load a translation and select a book to begin</div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: SETTINGS ── -->
+    <div class="ctrl-right" id="ctrl-right">
+
+      <div class="sh">Display Style</div>
+      <div class="stabs" style="margin-bottom:12px">
+        <button class="stab on" data-ds="folder-tab">Folder Tab</button>
+        <button class="stab" data-ds="clean-card">Clean Card</button>
+      </div>
+
+      <div class="sh">Screen Mode</div>
+      <div class="stabs" style="margin-bottom:14px">
+        <button class="stab on" data-sm="lower-third">Lower Third</button>
+        <button class="stab" data-sm="fullscreen">Full Screen</button>
+      </div>
+
+      <div class="sh">Customise</div>
+      <div class="stabs" id="custom-output-tabs" style="margin-bottom:8px">
+        <button class="stab on" data-ct="lowerThird">Lower Third</button>
+        <button class="stab" data-ct="fullscreen">Full Screen</button>
+        <button class="stab" data-ct="vertical">Vertical</button>
+      </div>
+      <div style="font-size:10px;color:var(--txt3);margin:-2px 0 9px" id="custom-output-note">Editing Lower Third settings</div>
+      <div class="stabs">
+        <button class="stab on" data-st="tab">Tab</button>
+        <button class="stab" data-st="verse">Verse</button>
+        <button class="stab" data-st="label">Label</button>
+        <button class="stab" data-st="bg">Background</button>
+        <button class="stab" data-st="anim">Animation</button>
+        <button class="stab" data-st="fs">Full Screen</button>
+        <button class="stab" data-st="vertical">Vertical</button>
+        <button class="stab" data-st="themes">Themes</button>
+      </div>
+
+      <!-- TAB -->
+      <div class="spane on" id="sp-tab">
+        <div style="height:9px"></div>
+        <div class="cr"><div class="csw"><input type="color" id="c-tab-bg" value="#C9A84C"></div><span class="clbl">Tab Background</span></div>
+        <div class="cr"><div class="csw"><input type="color" id="c-tab-txt" value="#09080e"></div><span class="clbl">Tab Text</span></div>
+        <div class="fc">
+          <div><div class="lbl">Font</div><select class="inp" id="s-tab-font"><option value="Cinzel">Cinzel</option><option value="Lora">Lora</option><option value="Montserrat">Montserrat</option><option value="Rubik">Rubik</option><option value="Bricolage Grotesque">Bricolage</option><option value="Inter">Inter</option></select></div>
+          <div><div class="lbl">Size</div><select class="inp" id="s-tab-size"><option value="14px">Small</option><option value="18px" selected>Med</option><option value="22px">Large</option><option value="27px">XL</option></select></div>
+        </div>
+        <div class="fc">
+          <div><div class="lbl">Weight</div><select class="inp" id="s-tab-wt"><option value="300">Light</option><option value="400">Regular</option><option value="600" selected>Semi-Bold</option><option value="700">Bold</option></select></div>
+          <div><div class="lbl">Align</div><div class="abts"><button class="abt on" data-ta="left">L</button><button class="abt" data-ta="center">C</button><button class="abt" data-ta="right">R</button></div></div>
+        </div>
+      </div>
+
+      <!-- VERSE -->
+      <div class="spane" id="sp-verse">
+        <div style="height:9px"></div>
+        <div class="cr"><div class="csw"><input type="color" id="c-v-txt" value="#F5E6C8"></div><span class="clbl">Verse Colour</span></div>
+        <div class="fc">
+          <div><div class="lbl">Font</div><select class="inp" id="s-v-font"><option value="Lora" selected>Lora</option><option value="Cinzel">Cinzel</option><option value="Montserrat">Montserrat</option><option value="Rubik">Rubik</option><option value="Bricolage Grotesque">Bricolage</option><option value="Inter">Inter</option></select></div>
+          <div><div class="lbl">Size</div><select class="inp" id="s-v-size"><option value="20px">Small</option><option value="26px" selected>Med</option><option value="32px">Large</option><option value="38px">XL</option></select></div>
+        </div>
+        <div class="fc">
+          <div><div class="lbl">Weight</div><select class="inp" id="s-v-wt"><option value="300">Light</option><option value="400" selected>Regular</option><option value="600">Semi-Bold</option><option value="700">Bold</option></select></div>
+          <div><div class="lbl">Spacing</div><select class="inp" id="s-v-ls"><option value="1.4">Tight</option><option value="1.65" selected>Normal</option><option value="1.9">Relaxed</option><option value="2.2">Loose</option></select></div>
+        </div>
+        <div style="margin-bottom:8px"><div class="lbl" style="margin-bottom:4px">Align</div><div class="abts"><button class="abt on" data-va="left">L</button><button class="abt" data-va="center">C</button><button class="abt" data-va="right">R</button><button class="abt" data-va="justify">J</button></div></div>
+        <div style="margin-bottom:8px"><div class="lbl" style="margin-bottom:4px">Padding</div><div class="abts"><button class="abt" data-pad="16px 20px">S</button><button class="abt on" data-pad="24px 32px">M</button><button class="abt" data-pad="36px 50px">L</button></div></div>
+        <div style="display:flex;align-items:center;gap:7px;cursor:pointer" id="shadow-wrap"><div class="tog" id="tog-shadow"></div><span style="font-size:12px;color:var(--txt2)">Text Shadow</span></div>
+      </div>
+
+      <!-- LABEL -->
+      <div class="spane" id="sp-label">
+        <div style="height:9px"></div>
+        <div class="cr"><div class="csw"><input type="color" id="c-tr-txt" value="#C9A84C"></div><span class="clbl">Translation Label</span></div>
+        <div class="fc">
+          <div><div class="lbl">Font</div><select class="inp" id="s-tr-font"><option value="Lora" selected>Lora</option><option value="Cinzel">Cinzel</option><option value="Inter">Inter</option><option value="Rubik">Rubik</option><option value="Montserrat">Montserrat</option></select></div>
+          <div><div class="lbl">Size</div><select class="inp" id="s-tr-size"><option value="13px">Small</option><option value="16px" selected>Med</option><option value="20px">Large</option></select></div>
+        </div>
+        <div style="margin-bottom:8px"><div class="lbl" style="margin-bottom:4px">Align</div><div class="abts"><button class="abt" data-tra="left">L</button><button class="abt" data-tra="center">C</button><button class="abt on" data-tra="right">R</button></div></div>
+        <div><div class="lbl">Safe Area</div><select class="inp" id="s-safe" style="margin-top:4px"><option value="0px">None</option><option value="20px">Small</option><option value="40px" selected>Medium</option><option value="80px">Large</option></select></div>
+        <div style="height:8px"></div>
+        <div class="cr"><div class="csw"><input type="color" id="c-border" value="#C9A84C"></div><span class="clbl">Card Border (Clean Card)</span></div>
+        <div style="margin-bottom:8px"><div class="lbl" style="margin-bottom:4px">Border Style</div><div class="abts"><button class="abt on" data-bs="left">Left</button><button class="abt" data-bs="full">Full</button><button class="abt" data-bs="none">None</button></div></div>
+      </div>
+
+      <!-- BACKGROUND -->
+      <div class="spane" id="sp-bg">
+        <div style="height:9px"></div>
+        <div class="lbl" style="margin-bottom:4px">Type</div>
+        <div class="bgt-row">
+          <button class="bgt on" data-bg="solid">Solid</button>
+          <button class="bgt" data-bg="gradient">Gradient</button>
+          <button class="bgt" data-bg="image">Image</button>
+        </div>
+        <div id="bg-solid"><div class="cr"><div class="csw"><input type="color" id="c-bg" value="#0a0810"></div><span class="clbl">Background Colour</span></div></div>
+        <div id="bg-grad" class="hidden">
+          <div class="cr"><div class="csw"><input type="color" id="c-g1" value="#0a0810"></div><span class="clbl">Colour 1</span></div>
+          <div class="cr"><div class="csw"><input type="color" id="c-g2" value="#1a1030"></div><span class="clbl">Colour 2</span></div>
+          <div><div class="lbl">Direction</div><select class="inp" id="s-gdir" style="margin-top:3px"><option value="135deg">Diagonal ↘</option><option value="90deg">Horizontal →</option><option value="180deg">Vertical ↓</option><option value="45deg">Diagonal ↗</option></select></div>
+        </div>
+        <div id="bg-img" class="hidden">
+          <button class="btn btn-ghost" style="width:100%;margin-bottom:7px;font-size:12px" id="btn-bgimg">Upload Image</button>
+          <input type="file" id="file-bgimg" accept="image/png,image/jpeg,image/webp" style="display:none">
+          <div id="bgimg-prev" style="border-radius:5px;overflow:hidden;max-height:60px"></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="lbl">Opacity — <span id="op-lbl">92%</span></div>
+          <input type="range" id="rng-op" min="0" max="100" value="92" style="width:100%;margin-top:3px;accent-color:var(--gold)">
+        </div>
+      </div>
+
+      <!-- ANIMATION -->
+      <div class="spane" id="sp-anim">
+        <div style="height:9px"></div>
+        <div class="lbl" style="margin-bottom:5px">Show Animation</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <button class="abt on" data-an="fade">Fade</button>
+          <button class="abt" data-an="up">Slide Up</button>
+          <button class="abt" data-an="left">Slide Left</button>
+          <button class="abt" data-an="right">Slide Right</button>
+          <button class="abt" data-an="blur">Blur In</button>
+          <button class="abt" data-an="none">None</button>
+        </div>
+      </div>
+
+
+      <!-- FULL SCREEN -->
+      <div class="spane" id="sp-fs">
+        <div style="height:9px"></div>
+        <div style="font-size:11px;color:var(--txt3);line-height:1.5;padding:8px 10px;background:var(--bg-input);border-radius:5px;margin-bottom:12px;">These settings apply to <strong style="color:var(--txt2)">Full Screen</strong> mode only.</div>
+        <div class="lbl">Reference Size — <span id="prs-ref-lbl">40px</span></div>
+        <input type="range" id="rng-prs-ref" min="18" max="72" value="40" style="width:100%;margin:4px 0 14px;accent-color:var(--gold)">
+        <div class="lbl">Verse Size (max) — <span id="prs-verse-lbl">190px</span></div>
+        <input type="range" id="rng-prs-verse" min="40" max="200" value="190" style="width:100%;margin:4px 0 6px;accent-color:var(--gold)">
+        <div style="font-size:10px;color:var(--txt3);line-height:1.5">Verse auto-scales down from this maximum to fit all text on screen. Lower for long passages.</div>
+      </div>
+
+<!-- THEMES -->
+      <div class="spane" id="sp-themes">
+        <div style="height:9px"></div>
+        <div class="lbl" style="margin-bottom:7px">Themes</div>
+        <div class="theme-grid" id="theme-grid"></div>
+        <div style="display:flex;gap:6px;margin-top:5px">
+          <button class="btn btn-ghost" id="btn-export" style="font-size:12px">Complete Backup</button>
+          <button class="btn btn-ghost" id="btn-import" style="font-size:12px">Restore Backup</button>
+          <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        </div>
+      </div>
+
+<div class="spane" id="sp-vertical">
+        <div style="height:9px"></div>
+        <div style="font-size:11px;color:var(--txt3);line-height:1.5;padding:8px 10px;background:var(--bg-input);border-radius:5px;margin-bottom:12px;">These settings apply to the <strong style="color:var(--txt2)">Vertical 9:16</strong> source only.</div>
+        <div><div class="lbl">Layout</div><select class="inp" id="portraitMode"><option value="lower-third">Lower Third</option><option value="fullscreen">Full Screen</option></select></div>
+        <label style="display:block;margin-top:9px;font-size:12px"><span class="lbl">Verse size (maximum)</span><input class="inp" type="number" id="portraitFont" value="48" min="24" max="120"></label>
+        <label style="display:block;margin-top:9px;font-size:12px"><span class="lbl">Side margin (%)</span><input class="inp" type="number" id="portraitMargin" value="6" min="2" max="20"></label>
+        <label style="display:block;margin-top:9px;font-size:12px"><span class="lbl">Bottom margin (%)</span><input class="inp" type="number" id="portraitBottom" value="12" min="0" max="30"></label>
+        <label style="display:block;margin-top:9px;font-size:12px"><span class="lbl">Card height (%)</span><input class="inp" type="number" id="portraitHeight" value="38" min="20" max="65"></label>
+        <p style="font-size:10px;color:var(--txt3);line-height:1.5;margin-top:9px">OBS source: use the hosted AltarWord URL with <strong>?mode=vertical</strong> at 1080 × 1920.</p>
+      </div>
+      <div style="padding:12px;border-bottom:1px solid var(--border);font-size:12px">
+ <strong style="color:var(--gold)">Connections</strong>
+ <div style="margin:8px 0">Connection: <strong>Firebase</strong><div id="ft-auto-note" style="font-size:11px;margin-top:6px">Internet connection required. Save Firebase using 🔗 once.</div></div>
+ <div id="ft-links" style="word-break:break-all;line-height:1.7"></div>
+ <div style="margin-top:10px"><label>Hosted AltarWord base URL<input id="cloud-remote-base" class="inp" placeholder="https://USERNAME.github.io/altarword/"></label><button id="cloud-remote-link" class="btn btn-ghost">Generate configured links</button><div id="cloud-remote-out" style="word-break:break-all"></div></div>
+</div>
+    </div><!-- ctrl-right -->
+  </div><!-- ctrl-body -->
+
+<div class="ctrl-tb">
+    <button class="btn-nav" id="btn-prev">◀</button>
+    <button class="btn-sh hiding" id="btn-sh">SHOW</button>
+    <button class="btn-nav" id="btn-next">▶</button>
+  </div>
+</div>
+
+<!-- ═══ DISPLAY ═══ -->
+<div id="disp" class="hidden">
+  <div id="disp-inner"></div>
+</div>
+
+
+
+<!-- ═══ REMOTE ═══ -->
+<div id="rem" class="hidden">
+  <div class="rem-hd">
+    <span class="rem-logo">Faith &amp; Truth</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="conn" id="rem-conn"></div>
+      <span style="font-size:11px;color:var(--txt3)" id="rem-conn-lbl">Connecting…</span>
+    </div>
+  </div>
+  <div class="rem-cv">
+    <div class="rem-ref" id="rem-ref">—</div>
+    <div class="rem-vt" id="rem-vt">No verse loaded</div>
+    <div class="rem-tr" id="rem-tr"></div>
+  </div>
+  <div class="rem-ctrl">
+    <button class="rem-nav" id="rem-prev">◀</button>
+    <button class="rem-sh hiding" id="rem-sh">SHOW</button>
+    <button class="rem-nav" id="rem-next">▶</button>
+  </div>
+  <div class="rem-tabs">
+    <button class="rem-tab on" data-rt="qr">Quick Ref</button>
+    <button class="rem-tab" data-rt="search">Search</button>
+    <button class="rem-tab" data-rt="queue">Queue</button>
+    <button class="rem-tab" data-rt="trans">Translation</button>
+  </div>
+  <div class="rem-content">
+    <div class="rem-pane on" id="rp-qr">
+      <div class="lbl" style="margin-bottom:6px">Type reference — Enter goes live</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px"><input type="text" class="inp" id="rem-qr" placeholder="jn 3 16"><button class="btn btn-gold" id="rem-qr-go">Go</button></div>
+      <div style="padding:10px;background:var(--bg-card);border-radius:var(--r);min-height:50px">
+        <div style="font-family:var(--display);font-size:10px;color:var(--gold);letter-spacing:.1em;margin-bottom:4px" id="rem-prev-ref"></div>
+        <div style="font-family:var(--verse);font-size:13px;color:var(--txt)" id="rem-prev-txt">—</div>
+      </div>
+      <button class="btn btn-gold" style="width:100%;margin-top:8px" id="rem-push">Push Live ↑</button>
+    </div>
+    <div class="rem-pane" id="rp-search">
+      <div style="display:flex;gap:6px;margin-bottom:8px"><input type="text" class="inp" id="rem-s-inp" placeholder="Search keyword…"><button class="btn btn-gold" id="rem-s-go">🔍</button></div>
+      <div id="rem-s-results" class="sr-list"></div>
+    </div>
+    <div class="rem-pane" id="rp-queue">
+      <div id="rem-q-list" style="margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px"><input type="text" class="inp" id="rem-q-add" placeholder="Add: jn 3 16"><button class="btn btn-gold" id="rem-q-go">+</button></div>
+    </div>
+    <div class="rem-pane" id="rp-trans">
+      <div class="lbl" style="margin-bottom:8px">Active Translation</div>
+      <div id="rem-tc-main" class="tc"></div>
+      <div style="height:13px"></div>
+      <div style="display:flex;align-items:center;gap:7px;cursor:pointer;margin-bottom:10px" id="rem-par-tog-wrap">
+        <div class="tog" id="rem-par-tog"></div>
+        <span style="font-size:13px;color:var(--txt2)">Parallel Mode</span>
+      </div>
+      <div id="rem-par-wrap" class="hidden">
+        <div class="lbl" style="margin-bottom:6px">Parallel Translation</div>
+        <div id="rem-tc-par" class="tc"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+<div class="moverlay hidden" id="m-search">
+  <div class="modal" style="max-width:560px">
+    <div class="mhd"><span class="mtitle">Search Bible</span><button class="ico" id="mc-search">✕</button></div>
+    <div class="mbody">
+      <div style="display:flex;gap:7px;margin-bottom:10px"><input type="text" class="inp" id="s-inp" placeholder="Keyword across all translations…"><button class="btn btn-gold" id="s-go">Search</button></div>
+      <div id="s-results" class="sr-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay hidden" id="m-queue">
+  <div class="modal">
+    <div class="mhd">
+      <span class="mtitle">Verse Queue</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:5px;cursor:pointer" id="q-en-wrap"><div class="tog on" id="q-en-tog"></div><span style="font-size:12px;color:var(--txt2)">Enabled</span></div>
+        <button class="ico" id="mc-queue">✕</button>
+      </div>
+    </div>
+    <div class="mbody">
+      <input type="text" class="inp" id="q-name" placeholder="Queue name (e.g. Sunday Morning)" style="margin-bottom:11px">
+      <div id="q-list"></div>
+      <div style="display:flex;gap:7px;margin-top:10px"><input type="text" class="inp" id="q-add" placeholder="Add: jn 3 16  or  1cor 13 4 7"><button class="btn btn-gold" id="q-add-go">Add</button></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="q-save">Save</button>
+      <button class="btn btn-danger" id="q-clear">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay hidden" id="m-firebase">
+  <div class="modal">
+    <div class="mhd"><span class="mtitle">Sync Setup — Firebase</span><button class="ico" id="mc-firebase">✕</button></div>
+    <div class="mbody">
+      <div style="font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:13px">Paste your Firebase Realtime Database config. <a href="https://console.firebase.google.com" target="_blank" style="color:var(--gold)">Create a free project →</a></div>
+      <div class="lbl">API Key</div><input type="text" class="inp" id="fb-key" placeholder="AIza..." style="margin-bottom:7px">
+      <div class="lbl">Database URL</div><input type="text" class="inp" id="fb-url" placeholder="https://yourproject-rtdb.firebaseio.com" style="margin-bottom:7px">
+      <div class="lbl">Project ID</div><input type="text" class="inp" id="fb-pid" placeholder="your-project-id" style="margin-bottom:7px">
+      <div class="lbl">Auth Domain</div><input type="text" class="inp" id="fb-auth" placeholder="yourproject.firebaseapp.com" style="margin-bottom:7px">
+      <div id="fb-status" style="font-size:12px;color:var(--txt3);margin-top:5px"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btn-ghost" id="fb-skip">Skip</button>
+      <button class="btn btn-gold" id="fb-save">Connect</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay hidden" id="m-about">
+  <div class="modal" style="max-width:420px">
+    <div class="mhd"><span class="mtitle">About AltarWord</span><button class="ico" id="mc-about">✕</button></div>
+    <div class="mbody" style="text-align:center">
+      <div style="font-family:var(--display);font-size:24px;color:var(--gold);letter-spacing:.12em;margin-bottom:5px">AltarWord</div>
+      <div style="font-size:10px;color:var(--txt3);letter-spacing:.1em;margin-bottom:16px">v1.0.0 · ALTARLIVE SUITE</div>
+      <div style="font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:18px">Church scripture display for OBS.</div>
+      <div style="display:flex;gap:7px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ghost" id="btn-ob-again" style="font-size:12px">Setup Guide</button>
+        <button class="btn btn-ghost" id="btn-obs-guide" style="font-size:12px">OBS Guide</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay hidden" id="m-obs">
+  <div class="modal" style="max-width:580px">
+    <div class="mhd"><span class="mtitle">OBS Setup Guide</span><button class="ico" id="mc-obs">✕</button></div>
+    <div class="mbody">
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div style="padding:12px;background:var(--bg-card);border-radius:var(--r);border-left:3px solid var(--gold)">
+          <div style="font-weight:600;color:var(--gold);font-size:10px;letter-spacing:.1em;margin-bottom:6px">STEP 1 — DISPLAY SOURCE</div>
+          <div style="font-size:13px;color:var(--txt2);line-height:1.6">Sources → + → Browser. Use the configured hosted Display URL shown under Connections. Width: 1920, Height: 1080.</div>
+        </div>
+        <div style="padding:12px;background:var(--bg-card);border-radius:var(--r);border-left:3px solid var(--gold)">
+          <div style="font-weight:600;color:var(--gold);font-size:10px;letter-spacing:.1em;margin-bottom:6px">STEP 3 — PHONE REMOTE</div>
+          <div style="font-size:13px;color:var(--txt2);line-height:1.6">Phones and other laptops use the configured hosted Remote URL. Firebase carries all control and sync traffic. Internet is required.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Remote Setup Modal -->
+<div class="moverlay hidden" id="m-remote">
+  <div class="modal" style="max-width:420px">
+    <div class="mhd"><span class="mtitle">📱 Phone Remote Setup</span><button class="ico" id="mc-remote">✕</button></div>
+    <div class="mbody">
+      <div id="remote-no-fb" class="hidden" style="padding:10px 12px;background:var(--bg-card);border-radius:var(--r);border-left:3px solid var(--danger);font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:14px">
+        Firebase is not connected yet. Click 🔗 in the header to add your Firebase config first.
+      </div>
+      <div id="remote-has-fb">
+        <div style="padding:10px 12px;background:var(--gold-faint);border-radius:var(--r);border-left:3px solid var(--gold);font-size:12px;color:var(--txt2);margin-bottom:16px;line-height:1.6">
+          <strong style="color:var(--gold)">Firebase connected ✓</strong><br>
+          Sync is live over the internet — your phone and laptop do not need to be on the same Wi-Fi.
+        </div>
+        <div class="lbl" style="margin-bottom:5px">Step 1 — Enter your app URL</div>
+        <div style="font-size:12px;color:var(--txt3);line-height:1.5;margin-bottom:8px">Your GitHub Pages address where the AltarWord remote is hosted.</div>
+        <input type="text" class="inp" id="rem-ip" placeholder="https://username.github.io/altarword-remote/" style="font-family:monospace;margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:5px">Step 2 — Generate & scan</div>
+        <button class="btn btn-gold" id="gen-qr" style="width:100%;margin-bottom:14px">Generate QR Code</button>
+        <div id="remote-qr-wrap" class="hidden">
+          <div class="lbl" style="margin-bottom:8px">Step 3 — Scan with your phone camera</div>
+          <div id="qr-code" style="margin:0 auto 12px;width:fit-content;background:#fff;padding:10px;border-radius:8px"></div>
+          <div id="remote-url-txt" style="font-size:10px;color:var(--txt3);word-break:break-all;margin-bottom:8px;padding:8px;background:var(--bg-input);border-radius:4px;font-family:monospace;line-height:1.5"></div>
+          <button class="btn btn-ghost" id="copy-remote-url" style="width:100%;font-size:12px">📋 Copy URL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding -->
+<div class="ob-ov hidden" id="ob-ov">
+  <div class="ob-card">
+    <div class="ob-dots" id="ob-dots"></div>
+    <div class="ob-icon" id="ob-icon">📖</div>
+    <div class="ob-title" id="ob-title">Welcome to AltarWord</div>
+    <div class="ob-txt" id="ob-txt">Your scripture display tool for church services.</div>
+    <div class="ob-foot">
+      <button class="ob-skip" id="ob-skip">Skip</button>
+      <button class="btn btn-gold" id="ob-next">Get Started →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+'use strict';
+// ═══ BOOKS ═══
+const BOOKS=['','Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
+const ABB={'gen':1,'ge':1,'gn':1,'genesis':1,'ex':2,'exo':2,'exod':2,'exodus':2,'lev':3,'le':3,'lv':3,'leviticus':3,'num':4,'nu':4,'nm':4,'numbers':4,'deut':5,'dt':5,'deu':5,'deuteronomy':5,'josh':6,'jos':6,'jsh':6,'joshua':6,'judg':7,'jdg':7,'jg':7,'judges':7,'ruth':8,'ru':8,'rut':8,'1sam':9,'1sa':9,'1 sam':9,'1 samuel':9,'2sam':10,'2sa':10,'2 sam':10,'2 samuel':10,'1kgs':11,'1ki':11,'1 kings':11,'1kings':11,'2kgs':12,'2ki':12,'2 kings':12,'2kings':12,'1chr':13,'1ch':13,'1 chronicles':13,'1chronicles':13,'2chr':14,'2ch':14,'2 chronicles':14,'2chronicles':14,'ezra':15,'ezr':15,'neh':16,'ne':16,'nehemiah':16,'est':17,'esth':17,'esther':17,'job':18,'jb':18,'ps':19,'psa':19,'psalm':19,'psalms':19,'prov':20,'pr':20,'prv':20,'proverbs':20,'eccl':21,'ec':21,'ecclesiastes':21,'song':22,'sg':22,'sos':22,'song of solomon':22,'isa':23,'is':23,'isaiah':23,'jer':24,'je':24,'jr':24,'jeremiah':24,'lam':25,'la':25,'lamentations':25,'ezek':26,'eze':26,'ezk':26,'ezekiel':26,'dan':27,'da':27,'dn':27,'daniel':27,'hos':28,'ho':28,'hosea':28,'joel':29,'jl':29,'joe':29,'amos':30,'am':30,'obad':31,'ob':31,'obadiah':31,'jonah':32,'jon':32,'jnh':32,'mic':33,'mi':33,'micah':33,'nah':34,'na':34,'nahum':34,'hab':35,'habakkuk':35,'zeph':36,'zep':36,'zephaniah':36,'hag':37,'haggai':37,'zech':38,'zec':38,'zechariah':38,'mal':39,'malachi':39,'matt':40,'mt':40,'mat':40,'matthew':40,'mark':41,'mk':41,'mr':41,'mar':41,'luke':42,'lk':42,'luk':42,'john':43,'jn':43,'joh':43,'jhn':43,'acts':44,'ac':44,'act':44,'rom':45,'ro':45,'rm':45,'romans':45,'1cor':46,'1co':46,'1 cor':46,'1 corinthians':46,'1corinthians':46,'2cor':47,'2co':47,'2 cor':47,'2 corinthians':47,'2corinthians':47,'gal':48,'ga':48,'galatians':48,'eph':49,'ephesians':49,'phil':50,'php':50,'philippians':50,'col':51,'colossians':51,'1thess':52,'1th':52,'1 thess':52,'1 thessalonians':52,'1thessalonians':52,'2thess':53,'2th':53,'2 thess':53,'2 thessalonians':53,'2thessalonians':53,'1tim':54,'1ti':54,'1 tim':54,'1 timothy':54,'1timothy':54,'2tim':55,'2ti':55,'2 tim':55,'2 timothy':55,'2timothy':55,'tit':56,'ti':56,'titus':56,'phlm':57,'phm':57,'philemon':57,'heb':58,'hebrews':58,'jas':59,'jm':59,'james':59,'1pet':60,'1pe':60,'1pt':60,'1 peter':60,'1peter':60,'2pet':61,'2pe':61,'2pt':61,'2 peter':61,'2peter':61,'1jn':62,'1jo':62,'1 john':62,'1john':62,'2jn':63,'2jo':63,'2 john':63,'2john':63,'3jn':64,'3jo':64,'3 john':64,'3john':64,'jude':65,'jud':65,'rev':66,'re':66,'rv':66,'revelation':66,'revelations':66};
+
+// ═══ STATE ═══
+const DEF_S={displayStyle:'folder-tab',screenMode:'lower-third',animation:'fade',tabBgColor:'#C9A84C',tabTxtColor:'#09080e',tabFont:'Cinzel',tabSize:'18px',tabWt:'600',tabAlign:'left',vTxtColor:'#F5E6C8',vFont:'Lora',vSize:'26px',vWt:'400',vLs:'1.65',vAlign:'left',textShadow:false,padding:'24px 32px',trTxtColor:'#C9A84C',trFont:'Lora',trSize:'16px',trAlign:'right',safeArea:'40px',bgType:'solid',bgColor:'#0a0810',g1:'#0a0810',g2:'#1a1030',gDir:'135deg',bgOpacity:0.92,bgImg:null,borderStyle:'left',borderColor:'#C9A84C',theme:'gold-dark',presRefSize:40,presVerseMax:190};
+const state={
+  live:{visible:false,book:43,ch:3,vs:16,ve:16,trans:'',parOn:false,parTrans:''},
+  nav:{book:43,ch:3},  // what's shown in chapter view
+  settings:{...DEF_S},
+  queue:{enabled:true,name:'Service',items:[],idx:-1},
+  ui:{theme:'dark',previewOn:true},
+  recent:[],
+  fbConfig:null
+};
+const translations={};
+
+// ═══ INDEXEDDB ═══
+let db=null;
+async function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('AltarWordDB',1);
+    r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains('trans'))d.createObjectStore('trans',{keyPath:'abbrev'});};
+    r.onsuccess=e=>{db=e.target.result;res(db);};
+    r.onerror=e=>rej(e);
+  });
+}
+async function dbPut(v){return new Promise((res,rej)=>{const tx=db.transaction('trans','readwrite');const r=tx.objectStore('trans').put(v);r.onsuccess=()=>res();r.onerror=e=>rej(e);});}
+async function dbAll(){return new Promise((res,rej)=>{const tx=db.transaction('trans','readonly');const r=tx.objectStore('trans').getAll();r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e);});}
+async function dbDel(abbrev){return new Promise((res,rej)=>{const tx=db.transaction('trans','readwrite');const r=tx.objectStore('trans').delete(abbrev);r.onsuccess=()=>res();r.onerror=e=>rej(e);});}
+
+// ═══ BIBLE PARSER ═══
+function parseBible(xml,fname){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  if(doc.querySelector('parsererror'))throw new Error('Invalid XML');
+  const bel=doc.querySelector('bible');if(!bel)throw new Error('Not a Bible XML');
+  const raw=bel.getAttribute('translation')||fname;
+  const abbrev=extractAbbrev(raw,fname);
+  const data={};
+  doc.querySelectorAll('book').forEach(b=>{
+    const bn=+b.getAttribute('number');if(!bn||bn<1||bn>66)return;
+    data[bn]={};
+    b.querySelectorAll('chapter').forEach(c=>{
+      const cn=+c.getAttribute('number');if(!cn)return;
+      data[bn][cn]={};
+      c.querySelectorAll('verse').forEach(v=>{const vn=+v.getAttribute('number');if(vn)data[bn][cn][vn]=v.textContent.trim();});
+    });
+  });
+  return{abbrev,translation:raw,data};
+}
+function extractAbbrev(t,f=''){
+  const known=['NKJV','NIV','ESV','NASB','KJV','NLT','NRSV','AMP','CSB','HCSB','RSV','ASV','MSG','NET','GNT','NCV','CEV','WEB'];
+  const u=(t+' '+f).toUpperCase();
+  for(const k of known)if(u.includes(k))return k;
+  const caps=t.match(/\b[A-Z]{2,5}\b/g);if(caps&&caps.length)return caps[0];
+  const ws=t.split(/\s+/).filter(w=>/^[A-Z]/.test(w));
+  if(ws.length>=2)return ws.slice(0,4).map(w=>w[0]).join('');
+  return(f.replace(/[^a-zA-Z]/g,'')||'TRANS').slice(0,6).toUpperCase();
+}
+function getVerses(tr,bn,cn,vs,ve){
+  const t=translations[tr];if(!t)return[];
+  const ch=t.data[bn]&&t.data[bn][cn];if(!ch)return[];
+  const out=[];for(let v=vs;v<=ve;v++)if(ch[v])out.push({n:v,t:ch[v]});return out;
+}
+function chLen(tr,bn,cn){const t=translations[tr];if(!t)return 0;const ch=t.data[bn]&&t.data[bn][cn];return ch?Object.keys(ch).length:0;}
+function chCount(tr,bn){const t=translations[tr];if(!t)return 0;const b=t.data[bn];return b?Object.keys(b).length:0;}
+
+// ═══ QUICK REF ═══
+function parseQR(inp){
+  if(!inp||!inp.trim())return null;
+  const raw=inp.trim().toLowerCase();
+  const parts=raw.split(/\s+/);
+  let bookNum=null,rest=[];
+  for(let l=Math.min(parts.length-1,3);l>=1;l--){
+    const a=parts.slice(0,l).join(' ');
+    if(ABB[a]!==undefined){bookNum=ABB[a];rest=parts.slice(l);break;}
+  }
+  if(!bookNum)return null;
+  const nums=rest.map(Number).filter(n=>!isNaN(n)&&n>0);
+  if(!nums.length)return null;
+  if(nums.length===1){
+    // Chapter only — load chapter view, do not go live
+    return{book:bookNum,ch:nums[0],vs:1,ve:1,chapterOnly:true};
+  }
+  return{book:bookNum,ch:nums[0],vs:nums[1],ve:nums[2]||nums[1],chapterOnly:false};
+}
+function fmtRef(bn,cn,vs,ve){const b=BOOKS[bn]||'';return vs===ve?`${b} ${cn}:${vs}`:`${b} ${cn}:${vs}–${ve}`;}
+function fmtShort(bn,cn,vs,ve){
+  const n=BOOKS[bn]||'';
+  const s=n.length>10?n.split(' ').map(w=>w.slice(0,3)).join('.').toUpperCase():n.toUpperCase();
+  return vs===ve?`${s} ${cn}:${vs}`:`${s} ${cn}:${vs}–${ve}`;
+}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+
+// ═══ OUTPUT-SPECIFIC CUSTOMISATION ═══
+const PROFILE_KEYS=['displayStyle','animation','tabBgColor','tabTxtColor','tabFont','tabSize','tabWt','tabAlign','vTxtColor','vFont','vSize','vWt','vLs','vAlign','textShadow','padding','trTxtColor','trFont','trSize','trAlign','safeArea','bgType','bgColor','g1','g2','gDir','bgOpacity','bgImg','borderStyle','borderColor','theme','presRefSize','presVerseMax','portraitMode','portraitFont','portraitMargin','portraitBottom','portraitHeight'];
+let customTarget='lowerThird';
+function profileSnapshot(s){const o={};PROFILE_KEYS.forEach(k=>{if(Object.hasOwn(s,k))o[k]=s[k];});return o;}
+function ensureProfiles(s){
+  if(!s.profiles)s.profiles={};
+  const legacy=profileSnapshot(s);
+  ['lowerThird','fullscreen','vertical'].forEach(k=>{s.profiles[k]={...legacy,...(s.profiles[k]||{})};});
+  return s;
+}
+function syncActiveProfile(){
+  if(!state?.settings)return;
+  ensureProfiles(state.settings);
+  state.settings.profiles[customTarget]={...state.settings.profiles[customTarget],...profileSnapshot(state.settings)};
+}
+function applyProfile(target,shouldSyncUI=true){
+  target=target||'lowerThird';
+  ensureProfiles(state.settings);
+  customTarget=target;
+  if(state?.ui)state.ui.customTarget=target;
+  Object.assign(state.settings,state.settings.profiles[target]||{});
+  if(shouldSyncUI)syncUIFromState();
+  document.querySelectorAll('[data-ct]').forEach(b=>b.classList.toggle('on',b.dataset.ct===target));
+  const note=document.getElementById('custom-output-note');
+  if(note)note.textContent='Editing '+(target==='lowerThird'?'Lower Third':target==='fullscreen'?'Full Screen':'Vertical')+' settings';
+  const verticalTab=document.querySelector('[data-st="vertical"]');
+  const fsTab=document.querySelector('[data-st="fs"]');
+  if(verticalTab)verticalTab.style.display=target==='vertical'?'':'none';
+  if(fsTab)fsTab.style.display=target==='fullscreen'?'':'none';
+  if(target==='vertical')selectSettingsPane('vertical');
+  else if(target==='fullscreen')selectSettingsPane('fs');
+  else if(document.querySelector('.spane.on')?.id==='sp-fs'||document.querySelector('.spane.on')?.id==='sp-vertical')selectSettingsPane('tab');
+}
+function selectSettingsPane(name){
+  document.querySelectorAll('[data-st]').forEach(x=>x.classList.toggle('on',x.dataset.st===name));
+  document.querySelectorAll('.spane').forEach(x=>x.classList.remove('on'));
+  document.getElementById('sp-'+name)?.classList.add('on');
+}
+function effectiveSettings(base,target){
+  const s=ensureProfiles({...base,profiles:base?.profiles?structuredClone(base.profiles):undefined});
+  const t=target||(isPortrait()?'vertical':s.screenMode==='fullscreen'?'fullscreen':'lowerThird');
+  return {...s,...(s.profiles?.[t]||{})};
+}
+
+// ═══ PERSISTENCE ═══
+function saveS(){try{syncActiveProfile();localStorage.setItem('aw_s',JSON.stringify(state.settings));}catch(e){}}
+function loadS(){try{const s=localStorage.getItem('aw_s');if(s)return ensureProfiles({...DEF_S,...JSON.parse(s)});}catch(e){}return ensureProfiles({...DEF_S});}
+function saveApp(){
+  try{localStorage.setItem('aw_a',JSON.stringify({live:state.live,nav:state.nav,queue:state.queue,ui:state.ui,recent:state.recent,fbConfig:state.fbConfig}));}catch(e){}
+}
+function loadApp(){
+  try{
+    const s=localStorage.getItem('aw_a');
+    if(s){
+      const d=JSON.parse(s);
+      if(d.live)Object.assign(state.live,d.live);
+      if(d.nav)Object.assign(state.nav,d.nav);
+      if(d.queue)Object.assign(state.queue,d.queue);
+      if(d.ui)Object.assign(state.ui,d.ui);customTarget=state.ui.customTarget||'lowerThird';
+      state.recent=(d.live?.directHistory||[]).map(r=>({...r,lbl:fmtShort(r.book,r.ch,r.vs,r.ve)}));
+      state.fbConfig=d.fbConfig||null;
+    }
+  }catch(e){}
+}
+
+// ═══ SYNC — HOSTED FIREBASE ONLY ═══
+let fbRef=null,fbDB=null,bc=null,syncing=false,cloudConnected=false;
+let hostHeartbeatTimer=null;
+const editorId=Math.random().toString(36).slice(2);
+let settingsSequence=0,settingsTimer=null,rangeEditing=false;
+function initBC(){
+  try{bc=new BroadcastChannel('aw-sync');bc.onmessage=e=>onSync(e.data);}catch(e){}
+}
+function refreshConnection(){
+  setConn(cloudConnected,'Firebase');
+  const note=document.getElementById('ft-auto-note');
+  if(note)note.textContent=cloudConnected?'Firebase connected · hosted mode':'Firebase disconnected · check internet/config';
+}
+async function initFB(cfg,force=false){
+  if(!cfg||!cfg.apiKey||!cfg.databaseURL)return false;
+  try{
+    if(typeof firebase==='undefined')throw Error('Firebase library did not load. Check internet access.');
+    // One Firebase app per hosted page.
+    if(!firebase.apps.length)firebase.initializeApp(cfg);
+    fbDB=firebase.database();
+    fbRef=fbDB.ref('altarword/live');
+
+    fbRef.off();
+    fbRef.on('value',snap=>{
+      const d=snap.val();if(!d)return;
+      // A remote request never writes directly to live. Live is always enriched by the controller.
+      onSync(d);
+    });
+
+    if(mode()==='controller'){
+      // Remote commands. The controller is the authority that enriches references/verse text.
+      const cmdRef=fbDB.ref('altarword/remote/commands');
+      cmdRef.off();
+      cmdRef.on('child_added',snap=>{
+        const req=snap.val();const id=req?.id||snap.key;if(!req||!id)return;
+        const finish=(ack)=>Promise.all([fbDB.ref('altarword/remote/acks/'+id).set({...ack,at:Date.now()}),snap.ref.remove()]);
+        if(req.issuedAt&&Date.now()-Number(req.issuedAt)>60000){finish({ok:false,error:'Command expired'});return;}
+        try{
+          if(req.update?.settings){Object.assign(state.settings,req.update.settings);saveS();syncUIFromState();}
+          const update={...state.live,...req.update};delete update.settings;
+          Promise.resolve(broadcast(update,req.historyAction||'status'))
+            .then(()=>finish({ok:true}))
+            .catch(e=>finish({ok:false,error:e.message||'Write failed'}));
+        }catch(e){finish({ok:false,error:e.message||'Command failed'});}
+      });
+
+      fbDB.ref('altarword/remote/chapter_req').off();
+      fbDB.ref('altarword/remote/chapter_req').on('value',snap=>{
+        const req=snap.val();if(!req||!req.id)return;
+        const tr=translations[req.trans]||translations[Object.keys(translations)[0]];if(!tr)return;
+        const ch=(tr.data[req.book]&&tr.data[req.book][req.ch])||{};
+        fbDB.ref('altarword/remote/chapter_res').set({reqId:req.id,book:+req.book,ch:+req.ch,trans:tr.abbrev||req.trans,verses:ch});
+      });
+
+      fbDB.ref('altarword/remote/search_req').off();
+      fbDB.ref('altarword/remote/search_req').on('value',snap=>{
+        const req=snap.val();if(!req||!req.id||!req.query)return;
+        fbDB.ref('altarword/remote/search_res').set({reqId:req.id,results:searchBible(req.query,40)});
+      });
+
+      const beat=()=>{
+        if(!fbDB)return;
+        fbDB.ref('altarword/hostHeartbeat').set({at:firebase.database.ServerValue.TIMESTAMP,session:editorId});
+        fbDB.ref('altarword/remote/translations').set(Object.keys(translations));
+      };
+      beat();clearInterval(hostHeartbeatTimer);hostHeartbeatTimer=setInterval(beat,5000);
+    }
+
+    fbDB.ref('altarword/settings').off();
+    fbDB.ref('altarword/settings').on('value',snap=>{
+      const d=snap.val();if(!d)return;
+      if(d.presVerseMax!==undefined&&state.settings.presVerseMax!==d.presVerseMax){
+        state.settings.presVerseMax=d.presVerseMax;saveS();
+        if(mode()==='controller')broadcast({...state.live});
+        if(mode()==='display')autoScalePres();
+      }
+    });
+
+    fbDB.ref('.info/connected').off();
+    fbDB.ref('.info/connected').on('value',snap=>{cloudConnected=snap.val()===true;refreshConnection();});
+    return true;
+  }catch(e){console.warn('Firebase:',e);cloudConnected=false;refreshConnection();return false;}
+}
+function initWS(){}
+function onSync(d){
+  if(!d)return;
+  if(d.settings&&!rangeEditing&&!(d._editor===editorId&&d._editSeq<settingsSequence)){
+    state.settings=ensureProfiles({...DEF_S,...d.settings});Object.assign(state.settings,state.settings.profiles[customTarget]||{});saveS();
+  }
+  try{localStorage.setItem('aw_live',JSON.stringify(d));}catch(e){}
+  const m=mode();
+  if(m==='controller'){
+    const moved=['book','ch','vs','ve','trans'].some(k=>state.live[k]!==d[k]);
+    Object.assign(state.live,d);
+    if(moved){state.nav.book=d.book;state.nav.ch=d.ch;syncNavSels();}
+    state.recent=(d.directHistory||[]).map(r=>({...r,lbl:fmtShort(r.book,r.ch,r.vs,r.ve)}));
+    renderRecent();refreshAllTC();syncUIFromState();syncBrandControls();
+    const par=document.getElementById('par-tog');if(par)par.className='tog'+(d.parOn?' on':'');
+    const sel=document.getElementById('par-sel');if(sel)sel.style.display=d.parOn?'block':'none';
+    saveApp();updateSHBtn();renderCV();
+  }
+  if(m==='display')renderDisp(d);
+  else if(m==='remote')applyToRemote(d);
+}
+function historyForUpdate(p,previous){
+  const rows=Array.isArray(previous)?previous:[];
+  if(p.historyAction==='clear')return [];
+  if(p.historyAction!=='direct'||!p.visible)return rows;
+  const item={book:p.book,ch:p.ch,vs:p.vs,ve:p.ve,trans:p.trans||'',refText:p.refText||'',verseText:p.verseText||''};
+  if(rows.some(r=>r.book===item.book&&r.ch===item.ch&&r.trans===item.trans))return rows;
+  return [item,...rows].slice(0,40);
+}
+function broadcast(p,historyAction='status'){
+  p={...p,historyAction,_editor:editorId,_editSeq:++settingsSequence};
+  p={...p,settings:{...state.settings}};
+  if(p.trans&&translations[p.trans]&&p.book){
+    const vv=getVerses(p.trans,p.book,p.ch,p.vs,p.ve);
+    p.verses=vv;p.verseText=vv.map(v=>v.t).join(' ');p.refText=fmtRef(p.book,p.ch,p.vs,p.ve);
+    if(p.parOn&&translations[p.parTrans])p.parallelVerses=getVerses(p.parTrans,p.book,p.ch,p.vs,p.ve);
+  }
+  p.directHistory=historyForUpdate(p,p.directHistory||state.live.directHistory);
+  if(bc)try{bc.postMessage(p);}catch(e){}
+  onSync(p);
+  if(!fbRef)return Promise.reject(Error('Firebase is not configured'));
+  return fbRef.set(p).catch(e=>{cloudConnected=false;refreshConnection();throw e;});
+}
+function setConn(ok,lbl){
+  ['conn-dot','rem-conn'].forEach(id=>{const d=document.getElementById(id);if(d)d.className='conn'+(ok?' ok':' err');});
+  ['conn-lbl','rem-conn-lbl'].forEach(id=>{const l=document.getElementById(id);if(l)l.textContent=ok?lbl:'Offline';});
+}
+function publishTransList(){
+  if(mode()!=='controller'||!fbDB)return;
+  try{fbDB.ref('altarword/remote/translations').set(Object.keys(translations));}catch(e){}
+}
+function mode(){
+  const raw=new URLSearchParams(location.search).get('mode')||'controller';
+  return raw==='vertical'?'display':raw;
+}
+
+// ═══ DISPLAY RENDERER ═══
+let displayTimer,lastDisplayPassage=null;
+function renderDisp(live){
+  clearTimeout(displayTimer);
+  const w=document.getElementById('disp-inner');if(!w)return;
+  if(!live||!live.visible){lastDisplayPassage=null;
+    w.style.opacity='0';displayTimer=setTimeout(()=>{w.innerHTML='';w.style.opacity='1';},220);return;
+  }
+  const s=effectiveSettings(live.settings||loadS());
+  if(isPortrait()){const root=document.getElementById('disp');root.style.width='100vw';root.style.height='100vh';portraitSettings=s;}
+  const html=buildDisp(live,s);
+  const signature=JSON.stringify([live.book,live.ch,live.vs,live.ve,live.trans,live.parOn,live.parTrans,live.visible]);
+  if(lastDisplayPassage===signature){w.innerHTML=html;w.style.opacity='1';if(isPortrait())setTimeout(fitPortrait,40);else if(s.screenMode==='fullscreen')setTimeout(autoScalePres,40);return;}
+  lastDisplayPassage=signature;
+  w.style.opacity='0';
+  displayTimer=setTimeout(()=>{
+    w.innerHTML=html;w.style.opacity='1';
+    if(isPortrait())setTimeout(fitPortrait,40);else if(s.screenMode==='fullscreen')setTimeout(autoScalePres,40);
+  },220);
+}
+function isPortrait(){const q=new URLSearchParams(location.search);return q.get('layout')==='portrait'||q.get('mode')==='vertical';}
+function portraitNumber(s,key,fallback,min,max){const n=Number(s[key]??fallback);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback;}
+function buildPortrait(live,s){
+ const vv=translations[live.trans]?getVerses(live.trans,live.book,live.ch,live.vs,live.ve):(live.verses||[]);if(!vv.length)return '';
+ const margin=portraitNumber(s,'portraitMargin',6,2,20),bottom=portraitNumber(s,'portraitBottom',12,0,30),height=portraitNumber(s,'portraitHeight',38,20,65);
+ const full=s.portraitMode==='fullscreen';
+ const verses=(vs,tr)=>`<div class="portrait-passage"><div class="portrait-text" style="font-family:'${s.vFont}',serif;color:${s.vTxtColor};font-weight:${s.vWt};text-align:${s.vAlign};${s.textShadow?'text-shadow:0 2px 8px #000;':''}">${buildVHTML(vs,live.vs!==live.ve)} <span style="font-size:.65em;opacity:.7">(${esc(tr)})</span></div></div>`;
+ const pv=live.parOn&&live.parTrans?(translations[live.parTrans]?getVerses(live.parTrans,live.book,live.ch,live.vs,live.ve):live.parallelVerses):null;
+ return `<div class="portrait-card aw-bg" style="position:absolute;left:${margin}%;right:${margin}%;${full?'top:4%;bottom:4%;':`bottom:${bottom}%;height:${height}%;`}${buildBG(s)}border-radius:12px;padding:28px;display:flex;flex-direction:column;gap:20px;overflow:hidden;border-top:5px solid ${s.tabBgColor}"><div style="flex-shrink:0;overflow-wrap:anywhere;font-family:'${s.tabFont}',serif;font-size:32px;line-height:1.3;color:${s.trTxtColor}">${esc(fmtRef(live.book,live.ch,live.vs,live.ve))}</div>${verses(vv,live.trans)}${pv?.length?verses(pv,live.parTrans):''}</div>`;
+}
+let portraitSettings=null;
+function fitPortrait(){
+ if(!isPortrait()||!portraitSettings)return;
+ document.querySelectorAll('.portrait-passage').forEach(box=>{
+  const text=box.querySelector('.portrait-text');if(!text)return;
+  let lo=1,hi=portraitNumber(portraitSettings,'portraitFont',48,24,120),best=1;
+  while(lo<=hi){const mid=Math.floor((lo+hi)/2);text.style.fontSize=mid+'px';if(text.scrollHeight<=box.clientHeight&&text.scrollWidth<=box.clientWidth){best=mid;lo=mid+1;}else hi=mid-1;}
+  text.style.fontSize=best+'px';
+ });
+}
+window.addEventListener('resize',fitPortrait);
+if(document.fonts?.ready)document.fonts.ready.then(fitPortrait);
+function buildDisp(live,s){return isPortrait()?buildPortrait(live,s):buildScripture(live,s)+brandMarkup(s);}
+function buildScripture(live,s){
+  const{book,ch,vs,ve,trans,parOn,parTrans}=live;
+  const vv=translations[trans]?getVerses(trans,book,ch,vs,ve):(live.verses||[]);if(!vv.length)return'';
+  const refShort=fmtShort(book,ch,vs,ve);
+  const refFull=fmtRef(book,ch,vs,ve);
+  const isRange=vs!==ve;
+  const anim='a-'+(s.animation==='none'?'fade':s.animation);
+  const safe=s.safeArea;
+  const innerW=Math.round(1920*0.8)+'px';
+
+  // FULL SCREEN: always professional presentation layout
+  if(s.screenMode==='fullscreen'){
+    const pvHTML=buildPresVHTML(vv,isRange);
+    let card;
+    if(parOn&&parTrans&&(translations[parTrans]||live.parallelVerses)){
+      const pv=translations[parTrans]?getVerses(parTrans,book,ch,vs,ve):live.parallelVerses;
+      card=presPairCard(refFull,pvHTML,trans,buildPresVHTML(pv,isRange),parTrans,s);
+    }else{
+      card=presCard(refFull,pvHTML,trans,s);
+    }
+    return`<div class="d-overlay" style="position:absolute;inset:0;width:100%;height:100%"><div class="${anim}" style="width:100%;height:100%">${card}</div></div>`;
+  }
+
+  // LOWER THIRD: folder tab or clean card
+  const vHTML=buildVHTML(vv,isRange);
+  if(s.displayStyle==='folder-tab'){
+    let card;
+    if(parOn&&parTrans&&(translations[parTrans]||live.parallelVerses)){
+      const pHTML=buildVHTML(translations[parTrans]?getVerses(parTrans,book,ch,vs,ve):live.parallelVerses,isRange);
+      card=`<div class="par-wrap ${anim}">${ftCard(refShort,vHTML,trans,s)}${ftCard(refShort,pHTML,parTrans,s)}</div>`;
+    }else{
+      card=`<div class="${anim}" style="width:100%">${ftCard(refShort,vHTML,trans,s)}</div>`;
+    }
+    return`<div class="d-overlay d-lower"><div style="width:${innerW};margin:0 auto;padding-bottom:${safe}">${card}</div></div>`;
+  }else{
+    let card;
+    if(parOn&&parTrans&&(translations[parTrans]||live.parallelVerses)){
+      const pHTML=buildVHTML(translations[parTrans]?getVerses(parTrans,book,ch,vs,ve):live.parallelVerses,isRange);
+      card=`<div class="par-wrap ${anim}">${ccCard(refShort,vHTML,trans,s)}${ccCard(refShort,pHTML,parTrans,s)}</div>`;
+    }else{
+      card=`<div class="${anim}" style="width:100%">${ccCard(refShort,vHTML,trans,s)}</div>`;
+    }
+    return`<div class="d-overlay d-lower"><div style="width:${innerW};margin:0 auto;padding-bottom:${safe}">${card}</div></div>`;
+  }
+}
+function buildVHTML(vv,isRange){
+  if(!vv.length)return'';
+  if(!isRange)return esc(vv[0].t);
+  return vv.map(v=>`<span class="vl"><sup class="vn">${v.n}</sup>${esc(v.t)}</span>`).join('');
+}
+// Presentation mode: inline verse text, no block elements
+function buildPresVHTML(vv,isRange){
+  if(!vv.length)return'';
+  if(!isRange)return esc(vv[0].t);
+  return vv.map(v=>`<sup style="font-size:.48em;vertical-align:super;opacity:.5;margin-right:2px;font-weight:400">${v.n}</sup>${esc(v.t)}`).join(' ');
+}
+// Shared card inner — same layout for single and each half of parallel
+function presCardInner(ref,vHTML,trans,s,sfx,isHalf){
+  const shadow=s.textShadow?'text-shadow:0 3px 16px rgba(0,0,0,.95),0 0 60px rgba(0,0,0,.6);':'';
+  const ac=s.tabBgColor;const rc=s.trTxtColor;
+  const id=sfx?'-'+sfx:'';
+  // Scale reference size down slightly for parallel (half-width panels)
+  const refPx=isHalf?Math.max(16,Math.round((s.presRefSize||40)*0.62))+'px':(s.presRefSize||40)+'px';
+  const hPad=isHalf?'4vw':'8vw';
+  const barW=isHalf?'36px':'52px';
+  const topMarg=isHalf?'5vh':'7vh';
+  return`<div id="pres-slide${id}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;overflow:hidden;">
+    <div style="width:${barW};height:3px;background:${ac};border-radius:2px;margin-top:${topMarg};flex-shrink:0;opacity:.8;"></div>
+    <div id="pres-ref-el${id}" style="font-family:'${s.tabFont}',serif;color:${rc};text-align:center;letter-spacing:.18em;font-weight:${s.tabWt};margin-top:2vh;opacity:.9;font-size:${refPx};padding:0 ${hPad};flex-shrink:0;line-height:1.3;">${ref}</div>
+    <div style="width:28px;height:1px;background:${ac};margin-top:3.5vh;margin-bottom:1vh;flex-shrink:0;opacity:.3;"></div>
+    <div id="pres-verse-el${id}" style="flex:1;display:flex;align-items:center;justify-content:center;padding:1vh ${hPad} 8vh;width:100%;overflow:hidden;">
+      <div id="pres-verse-inner${id}" style="font-family:'${s.vFont}',serif;font-weight:700;color:${s.vTxtColor};text-align:center;line-height:1.42;${shadow}font-size:5.2vw;max-width:100%;">${vHTML}<span style="font-weight:400;opacity:.6;font-size:.64em;"> (${trans})</span></div>
+    </div>
+  </div>`;
+}
+function presCard(ref,vHTML,trans,s){
+  const bg=buildBG(s);
+  return`<div class="aw-bg" style="position:absolute;inset:0;${bg}">${presCardInner(ref,vHTML,trans,s,'',false)}</div>`;
+}
+function presPairCard(ref,vHTML1,trans1,vHTML2,trans2,s){
+  const bg=buildBG(s);
+  return`<div class="aw-bg" style="position:absolute;inset:0;${bg}display:grid;grid-template-columns:1fr 1fr;">
+    <div style="position:relative;overflow:hidden;border-right:1px solid rgba(255,255,255,.08);">${presCardInner(ref,vHTML1,trans1,s,'1',true)}</div>
+    <div style="position:relative;overflow:hidden;">${presCardInner(ref,vHTML2,trans2,s,'2',true)}</div>
+  </div>`;
+}
+// Scale each column independently
+function scalePresEl(sfx,s){
+  const id=sfx?'-'+sfx:'';
+  const c=document.getElementById('pres-verse-el'+id);
+  const inner=document.getElementById('pres-verse-inner'+id);
+  if(!c||!inner)return;
+  const maxH=c.clientHeight;const maxW=c.clientWidth;
+  let lo=16,hi=s.presVerseMax||190,best=50;
+  for(let i=0;i<16;i++){
+    const mid=Math.round((lo+hi)/2);
+    inner.style.fontSize=mid+'px';
+    inner.style.lineHeight=mid>80?'1.26':mid>55?'1.36':'1.45';
+    if(inner.scrollHeight<=maxH&&inner.offsetWidth<=maxW){best=mid;lo=mid+1;}
+    else hi=mid-1;
+  }
+  inner.style.fontSize=best+'px';
+  inner.style.lineHeight=best>80?'1.26':best>55?'1.36':'1.45';
+}
+function autoScalePres(){
+  const s=effectiveSettings(loadS(),'fullscreen');
+  scalePresEl('',s);   // single mode
+  scalePresEl('1',s);  // parallel left
+  scalePresEl('2',s);  // parallel right
+}
+function ftCard(ref,vHTML,tr,s){
+  const bg=buildBG(s);
+  const shadow=s.textShadow?'text-shadow:0 2px 8px rgba(0,0,0,.8),0 0 20px rgba(0,0,0,.5);':'';
+  const tabAlign=s.tabAlign==='center'?'center':s.tabAlign==='right'?'flex-end':'flex-start';
+  const tabS=`background:${s.tabBgColor};color:${s.tabTxtColor};font-family:'${s.tabFont}',serif;font-size:${s.tabSize};font-weight:${s.tabWt};text-align:${s.tabAlign};`;
+  const bodyS=`${bg}padding:${s.padding};width:100%;border-radius:0 8px 8px 8px;`;
+  const vS=`font-family:'${s.vFont}',serif;font-size:${s.vSize};font-weight:${s.vWt};color:${s.vTxtColor};line-height:${s.vLs};text-align:${s.vAlign};${shadow}`;
+  const trS=`font-family:'${s.trFont}',serif;font-size:${s.trSize};color:${s.trTxtColor};text-align:${s.trAlign};`;
+  return`<div class="ft-outer" style="align-items:${tabAlign}"><div class="ft-tab" style="${tabS}">${ref}</div><div class="ft-body aw-bg" style="${bodyS}"><div class="ft-verse" style="${vS}margin-bottom:10px">${vHTML}</div><div class="ft-trans" style="${trS}">(${tr})</div></div></div>`;
+}
+function ccCard(ref,vHTML,tr,s){
+  const bg=buildBG(s);
+  const shadow=s.textShadow?'text-shadow:0 2px 8px rgba(0,0,0,.8);':'';
+  let border='';
+  if(s.borderStyle==='left')border=`border-left:4px solid ${s.borderColor};`;
+  else if(s.borderStyle==='full')border=`border:2px solid ${s.borderColor};`;
+  const bodyS=`${bg}${border}border-radius:8px;padding:${s.padding};`;
+  const refS=`font-family:'Cinzel',serif;font-size:${s.tabSize};font-weight:${s.tabWt};color:${s.trTxtColor};letter-spacing:.15em;margin-bottom:10px;text-align:${s.tabAlign};`;
+  const vS=`font-family:'${s.vFont}',serif;font-size:${s.vSize};font-weight:${s.vWt};color:${s.vTxtColor};line-height:${s.vLs};text-align:${s.vAlign};${shadow}`;
+  const trS=`font-family:'${s.trFont}',serif;font-size:${s.trSize};color:${s.trTxtColor};text-align:${s.trAlign};`;
+  return`<div class="cc-body aw-bg" style="${bodyS}"><div class="cc-ref" style="${refS}">${ref}</div><div class="cc-verse" style="${vS}margin-bottom:8px">${vHTML}</div><div class="cc-trans" style="${trS}">(${tr})</div></div>`;
+}
+function buildBG(s){
+ const a=Math.min(1,Math.max(0,Number.isFinite(Number(s.bgOpacity))?Number(s.bgOpacity):1));
+ let bg=s.bgColor;
+ if(s.bgType==='gradient')bg=`linear-gradient(${s.gDir},${s.g1},${s.g2})`;
+ if(s.bgType==='image'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s.bgImg||''))bg=`url('${s.bgImg}') center/cover no-repeat`;
+ return `--aw-bg:${bg};--aw-alpha:${a};`;
+}
+function h2r(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
+
+// ═══ CHAPTER VIEW ═══
+function renderCV(){
+  const list=document.getElementById('cv-list');if(!list)return;
+  const{book,ch}=state.nav;
+  const trans=state.live.trans;
+  const titleEl=document.getElementById('cv-title');
+  const trEl=document.getElementById('cv-tr-lbl');
+  if(titleEl)titleEl.textContent=`${(BOOKS[book]||'').toUpperCase()} ${ch}`;
+  if(trEl)trEl.textContent=trans||'';
+  if(!trans||!translations[trans]){
+    list.innerHTML='<div class="cv-empty">Load a translation to view verses</div>';return;
+  }
+  const chapter=translations[trans].data[book]&&translations[trans].data[book][ch];
+  if(!chapter){list.innerHTML='<div class="cv-empty">Chapter not found</div>';return;}
+  const nums=Object.keys(chapter).map(Number).sort((a,b)=>a-b);
+  const isLiveCh=state.live.visible&&state.live.book===book&&state.live.ch===ch;
+  list.innerHTML=nums.map(vn=>{
+    const isLive=isLiveCh&&vn>=state.live.vs&&vn<=state.live.ve;
+    const isRange=isLiveCh&&!isLive&&vn>state.live.vs&&vn<state.live.ve;
+    return`<div class="cv-item${isLive?' live':''}" data-v="${vn}"><span class="cv-vn">${vn}</span><span class="cv-vt">${esc(chapter[vn])}</span></div>`;
+  }).join('');
+  // Event delegation — one listener, no duplicates
+  list.onclick=e=>{
+    const item=e.target.closest('.cv-item');if(!item)return;
+    const vn=parseInt(item.dataset.v);
+    goLive(book,ch,vn,vn,trans);
+  };
+  // Auto-scroll live verse
+  if(isLiveCh){
+    const el=list.querySelector(`.cv-item[data-v="${state.live.vs}"]`);
+    if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),80);
+  }
+}
+
+// ═══ GO LIVE ═══
+function goLive(book,ch,vs,ve,trans,historyAction='direct'){commitLive(book,ch,vs,ve,trans,historyAction);}
+function commitLive(book,ch,vs,ve,trans,historyAction='direct'){
+  state.live.book=book;state.live.ch=ch;state.live.vs=vs;state.live.ve=ve;
+  state.live.trans=trans||state.live.trans;
+  state.live.visible=true;
+  // Sync nav to match
+  state.nav.book=book;state.nav.ch=ch;
+  updateSHBtn();
+  broadcast({...state.live},historyAction);
+  renderCV();
+  syncNavSels();
+  saveApp();
+}
+
+// ═══ NAVIGATION ═══
+function syncNavSels(){
+  const bs=document.getElementById('sel-book');
+  if(bs)bs.value=state.nav.book;
+  populateCh();
+  const cs=document.getElementById('sel-ch');
+  if(cs)cs.value=state.nav.ch;
+  populateVs();
+}
+function populateBooks(){
+  const s=document.getElementById('sel-book');if(!s)return;
+  s.innerHTML=BOOKS.slice(1).map((n,i)=>`<option value="${i+1}"${i+1===state.nav.book?' selected':''}>${n}</option>`).join('');
+}
+function populateCh(){
+  const s=document.getElementById('sel-ch');if(!s)return;
+  const cnt=chCount(state.live.trans,state.nav.book)||150;
+  s.innerHTML=Array.from({length:cnt},(_,i)=>`<option value="${i+1}"${i+1===state.nav.ch?' selected':''}>${i+1}</option>`).join('');
+}
+function populateVs(){
+  const ss=document.getElementById('sel-vs');const se=document.getElementById('sel-ve');if(!ss||!se)return;
+  const cnt=chLen(state.live.trans,state.nav.book,state.nav.ch)||176;
+  const opts=Array.from({length:cnt},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+  ss.innerHTML=opts;se.innerHTML=opts;
+  const sameCh=state.live.book===state.nav.book&&state.live.ch===state.nav.ch;
+  ss.value=sameCh?(state.live.vs||1):1;
+  se.value=sameCh?(state.live.ve||1):1;
+}
+function navigateCV(dir){
+  const tr=state.live.trans;
+  const{book,ch}=state.nav;
+  if(dir==='pv'){
+    // Previous verse
+    if(state.live.visible&&state.live.book===book&&state.live.ch===ch&&state.live.vs>1){
+      goLive(book,ch,state.live.vs-1,state.live.vs-1,tr,'navigation');
+    }else if(state.live.vs>1){
+      goLive(state.live.book,state.live.ch,state.live.vs-1,state.live.vs-1,tr,'navigation');
+    }else{
+      const prevCh=state.live.ch>1?state.live.ch-1:null;
+      if(prevCh){const cl=chLen(tr,state.live.book,prevCh);goLive(state.live.book,prevCh,cl,cl,tr,'navigation');}
+    }
+  }else if(dir==='nv'){
+    // Next verse
+    const liveCh=state.live.ch;const liveBook=state.live.book;
+    const cl=chLen(tr,liveBook,liveCh);
+    if(state.live.ve<cl){goLive(liveBook,liveCh,state.live.ve+1,state.live.ve+1,tr,'navigation');}
+    else{
+      const cc=chCount(tr,liveBook);
+      if(liveCh<cc){goLive(liveBook,liveCh+1,1,1,tr,'navigation');}
+      else if(liveBook<66){goLive(liveBook+1,1,1,1,tr,'navigation');}
+    }
+  }else if(dir==='pc'){
+    // Previous chapter (nav only)
+    if(ch>1){state.nav.ch=ch-1;}
+    else if(book>1){state.nav.book=book-1;state.nav.ch=chCount(tr,book-1)||1;}
+    syncNavSels();renderCV();saveApp();
+  }else if(dir==='nc'){
+    // Next chapter (nav only)
+    const cc=chCount(tr,book)||1;
+    if(ch<cc){state.nav.ch=ch+1;}
+    else if(book<66){state.nav.book=book+1;state.nav.ch=1;}
+    syncNavSels();renderCV();saveApp();
+  }
+}
+
+// ═══ SHOW/HIDE & PREV/NEXT ═══
+function toggleVisible(){state.live.visible=!state.live.visible;updateSHBtn();broadcast({...state.live});saveApp();}
+function updateSHBtn(){
+  const on=state.live.visible;
+  ['btn-sh','rem-sh'].forEach(id=>{
+    const b=document.getElementById(id);if(!b)return;
+    b.textContent=on?'HIDE':'SHOW';b.className=(id==='btn-sh'?'btn-sh ':'rem-sh ')+(on?'showing':'hiding');
+  });
+}
+function prevVerse(){
+  if(state.live.visible)navigateCV('pv');
+  else{state.nav.book=state.live.book;state.nav.ch=state.live.ch;navigateCV('pv');}
+}
+function nextVerse(){
+  if(state.live.visible)navigateCV('nv');
+  else{navigateCV('nv');}
+}
+
+// ═══ RECENTLY VIEWED ═══
+function addRecent(){
+  const{book,ch,vs,ve,trans}=state.live;
+  const lbl=fmtShort(book,ch,vs,ve);
+  state.recent=[{book,ch,vs,ve,trans,lbl},...state.recent.filter(r=>r.lbl!==lbl)].slice(0,8);
+  renderRecent();saveApp();
+}
+function renderRecent(){
+  const row=document.getElementById('recent-row');if(!row)return;
+  if(!state.recent.length){row.innerHTML='<span style="font-size:11px;color:var(--txt3)">None yet</span>';return;}
+  row.innerHTML=state.recent.map((r,i)=>`<div class="chip" data-i="${i}">${r.lbl}</div>`).join('');
+  row.onclick=e=>{
+    const c=e.target.closest('.chip');if(!c)return;
+    const r=state.recent[+c.dataset.i];if(!r)return;
+    state.nav.book=r.book;state.nav.ch=r.ch;
+    syncNavSels();renderCV();
+    goLive(r.book,r.ch,r.vs,r.ve,r.trans);
+  };
+}
+
+// ═══ TRANSLATIONS ═══
+function renderTC(id,activeTrans,onChange){
+  const el=document.getElementById(id);if(!el)return;
+  const abs=Object.keys(translations);
+  if(!abs.length){el.innerHTML='<span style="font-size:11px;color:var(--txt3)">No translations loaded</span>';return;}
+  const showRm=(id==='tc-main');
+  el.innerHTML=abs.map(a=>`<div class="tch${activeTrans===a?' on':''}" data-a="${a}">${a}${showRm?`<span class="tch-rm" data-rm="${a}">✕</span>`:''}</div>`).join('');
+  // Use one delegated listener — no duplicate risk
+  el.onclick=e=>{
+    const rm=e.target.closest('.tch-rm');
+    if(rm){removeTrans(rm.dataset.rm);return;}
+    const chip=e.target.closest('.tch');if(!chip)return;
+    const a=chip.dataset.a;
+    // Update all relevant state
+    if(id==='tc-main'){state.live.trans=a;renderTC('tc-main',a,onChange);renderCV();populateCh();broadcast({...state.live});}
+    else if(id==='rem-tc-main'){state.live.trans=a;renderTC('rem-tc-main',a,onChange);broadcast({...state.live});}
+    else if(id==='rem-tc-par'){state.live.parTrans=a;renderTC('rem-tc-par',a,onChange);broadcast({...state.live});}
+    if(onChange)onChange(a);
+  };
+}
+async function removeTrans(abbrev){
+  if(!confirm(`Remove "${abbrev}"?\n\nYou can reload the file at any time.`))return;
+  delete translations[abbrev];
+  await dbDel(abbrev);
+  const rem=Object.keys(translations);
+  if(state.live.trans===abbrev)state.live.trans=rem[0]||'';
+  if(state.live.parTrans===abbrev)state.live.parTrans=rem[0]||'';
+  refreshAllTC();populateCh();renderCV();publishTransList();saveApp();
+}
+function refreshAllTC(){
+  renderTC('tc-main',state.live.trans);
+  renderTC('rem-tc-main',state.live.trans);
+  renderTC('rem-tc-par',state.live.parTrans);
+  updateParSel();
+}
+function updateParSel(){
+  const s=document.getElementById('par-sel');if(!s)return;
+  s.innerHTML=Object.keys(translations).map(a=>`<option value="${a}"${a===state.live.parTrans?' selected':''}>${a}</option>`).join('');
+}
+
+
+
+// ═══ THEMES ═══
+const THEMES=[
+  {id:'gold-dark',name:'Gold/Dark',tb:'#C9A84C',tt:'#09080e',bb:'#0a0810',vt:'#F5E6C8',tl:'#C9A84C'},
+  {id:'white-clean',name:'White/Clean',tb:'#1a1a2e',tt:'#ffffff',bb:'#ffffff',vt:'#0d0d1a',tl:'#1a1a2e'},
+  {id:'royal-purple',name:'Purple',tb:'#9b59b6',tt:'#ffffff',bb:'#1e0a3c',vt:'#f0e6ff',tl:'#d4a8ff'},
+  {id:'deep-blue',name:'Deep Blue',tb:'#2c5282',tt:'#ffffff',bb:'#050f28',vt:'#ddeeff',tl:'#5b9bd5'},
+  {id:'crimson',name:'Crimson',tb:'#c0392b',tt:'#ffffff',bb:'#1e0505',vt:'#ffe8e8',tl:'#e05555'},
+  {id:'forest',name:'Forest',tb:'#27ae60',tt:'#ffffff',bb:'#05140a',vt:'#e0f5ea',tl:'#4caf7d'},
+];
+function applyTheme(id){
+  const th=THEMES.find(t=>t.id===id);if(!th)return;
+  Object.assign(state.settings,{theme:id,tabBgColor:th.tb,tabTxtColor:th.tt,bgColor:th.bb,g1:th.bb,vTxtColor:th.vt,trTxtColor:th.tl});
+  saveS();syncUIFromState();broadcast({...state.live});
+}
+function renderThemes(){
+  const g=document.getElementById('theme-grid');if(!g)return;
+  g.innerHTML=THEMES.map(t=>`<div class="tcard${state.settings.theme===t.id?' on':''}" data-th="${t.id}"><div class="tprev" style="background:${t.bb}"><div class="tbar" style="background:${t.tb}"></div></div><div class="tname" style="color:${state.settings.theme===t.id?'var(--gold)':''}">${t.name}</div></div>`).join('');
+}
+
+// ═══ SETTINGS UI ═══
+function syncUIFromState(){
+  const s=state.settings;
+  sv('portraitMode',s.portraitMode||'lower-third');
+  sv('portraitFont',portraitNumber(s,'portraitFont',48,24,120));
+  sv('portraitMargin',portraitNumber(s,'portraitMargin',6,2,20));
+  sv('portraitBottom',portraitNumber(s,'portraitBottom',12,0,30));
+  sv('portraitHeight',portraitNumber(s,'portraitHeight',38,20,65));
+  const imagePreview=document.getElementById('bgimg-prev');if(imagePreview)imagePreview.innerHTML=s.bgImg?'<img alt="Background" src="'+s.bgImg+'" style="width:100%;height:60px;object-fit:cover">':'';
+  sv('c-tab-bg',s.tabBgColor);sv('c-tab-txt',s.tabTxtColor);sv('s-tab-font',s.tabFont);sv('s-tab-size',s.tabSize);sv('s-tab-wt',s.tabWt);
+  sv('c-v-txt',s.vTxtColor);sv('s-v-font',s.vFont);sv('s-v-size',s.vSize);sv('s-v-wt',s.vWt);sv('s-v-ls',s.vLs);
+  sv('c-tr-txt',s.trTxtColor);sv('s-tr-font',s.trFont);sv('s-tr-size',s.trSize);sv('s-safe',s.safeArea);
+  sv('c-bg',s.bgColor);sv('c-g1',s.g1);sv('c-g2',s.g2);sv('s-gdir',s.gDir);sv('c-border',s.borderColor);
+  const op=document.getElementById('rng-op');if(op){op.value=Math.round(s.bgOpacity*100);const l=document.getElementById('op-lbl');if(l)l.textContent=op.value+'%';}
+  const sh=document.getElementById('tog-shadow');if(sh)sh.className='tog'+(s.textShadow?' on':'');
+  setA('[data-ds]',s.displayStyle,'ds');setA('[data-sm]',s.screenMode,'sm');
+  setA('[data-bg]',s.bgType,'bg');setA('[data-an]',s.animation,'an');
+  setA('[data-ta]',s.tabAlign,'ta');setA('[data-va]',s.vAlign,'va');setA('[data-tra]',s.trAlign,'tra');
+  setA('[data-bs]',s.borderStyle,'bs');setA('[data-pad]',s.padding,'pad');
+  const rRef=document.getElementById('rng-prs-ref');if(rRef){rRef.value=s.presRefSize||40;const l=document.getElementById('prs-ref-lbl');if(l)l.textContent=(s.presRefSize||40)+'px';}
+  const rVerse=document.getElementById('rng-prs-verse');if(rVerse){rVerse.value=s.presVerseMax||190;const l=document.getElementById('prs-verse-lbl');if(l)l.textContent=(s.presVerseMax||190)+'px';}
+  showBgCtrl(s.bgType);
+  const tb=document.getElementById('btn-theme');if(tb)tb.textContent=state.ui.theme==='dark'?'☀️':'🌙';
+  document.body.classList.toggle('light',state.ui.theme==='light');
+  renderThemes();
+}
+function sv(id,v){const e=document.getElementById(id);if(e)e.value=v;}
+function gv(id){const e=document.getElementById(id);return e?e.value:null;}
+function setA(sel,val,attr){
+  document.querySelectorAll(sel).forEach(b=>{
+    const bv=b.dataset[attr];b.classList.toggle('on',bv===val);
+  });
+}
+function showBgCtrl(t){
+  for(const [id,type] of [['bg-solid','solid'],['bg-grad','gradient'],['bg-img','image']]){
+    const e=document.getElementById(id);if(e){e.classList.toggle('hidden',t!==type);e.style.display=t===type?'block':'none';}
+  }
+}
+function queueSettings(){clearTimeout(settingsTimer);settingsTimer=setTimeout(()=>broadcast({...state.live}),120);}
+function readUI(){
+  const s=state.settings;
+  if(gv('portraitMode'))s.portraitMode=gv('portraitMode');
+  if(gv('portraitFont')!==null&&gv('portraitFont')!=='')s.portraitFont=portraitNumber({portraitFont:gv('portraitFont')},'portraitFont',48,24,120);
+  if(gv('portraitMargin')!==null&&gv('portraitMargin')!=='')s.portraitMargin=portraitNumber({portraitMargin:gv('portraitMargin')},'portraitMargin',6,2,20);
+  if(gv('portraitBottom')!==null&&gv('portraitBottom')!=='')s.portraitBottom=portraitNumber({portraitBottom:gv('portraitBottom')},'portraitBottom',12,0,30);
+  if(gv('portraitHeight')!==null&&gv('portraitHeight')!=='')s.portraitHeight=portraitNumber({portraitHeight:gv('portraitHeight')},'portraitHeight',38,20,65);
+
+  s.tabBgColor=gv('c-tab-bg')||s.tabBgColor;s.tabTxtColor=gv('c-tab-txt')||s.tabTxtColor;
+  s.tabFont=gv('s-tab-font')||s.tabFont;s.tabSize=gv('s-tab-size')||s.tabSize;s.tabWt=gv('s-tab-wt')||s.tabWt;
+  s.vTxtColor=gv('c-v-txt')||s.vTxtColor;s.vFont=gv('s-v-font')||s.vFont;s.vSize=gv('s-v-size')||s.vSize;
+  s.vWt=gv('s-v-wt')||s.vWt;s.vLs=gv('s-v-ls')||s.vLs;
+  s.trTxtColor=gv('c-tr-txt')||s.trTxtColor;s.trFont=gv('s-tr-font')||s.trFont;s.trSize=gv('s-tr-size')||s.trSize;
+  s.safeArea=gv('s-safe')||s.safeArea;s.bgColor=gv('c-bg')||s.bgColor;s.g1=gv('c-g1')||s.g1;s.g2=gv('c-g2')||s.g2;
+  s.gDir=gv('s-gdir')||s.gDir;s.borderColor=gv('c-border')||s.borderColor;
+  const op=document.getElementById('rng-op');if(op)s.bgOpacity=+op.value/100;
+  saveS();queueSettings();
+}
+
+// ═══ SEARCH ═══
+function searchBible(kw,max=60){
+  if(!kw||kw.length<2)return[];
+  const lk=kw.toLowerCase();const out=[];
+  for(const[ab,t]of Object.entries(translations)){
+    for(const[bn,chs]of Object.entries(t.data)){
+      for(const[cn,vss]of Object.entries(chs)){
+        for(const[vn,tx]of Object.entries(vss)){
+          if(tx.toLowerCase().includes(lk)){
+            out.push({book:+bn,ch:+cn,vs:+vn,ve:+vn,trans:ab,text:tx,ref:fmtRef(+bn,+cn,+vn,+vn)});
+            if(out.length>=max)return out;
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+function hlKw(txt,kw){
+  if(!kw)return esc(txt);
+  const e=esc(txt);const k=kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return e.replace(new RegExp(k,'gi'),m=>`<mark>${m}</mark>`);
+}
+function renderSearch(results,kw,containerId,onSelect){
+  const el=document.getElementById(containerId);if(!el)return;
+  if(!results.length){el.innerHTML='<div style="font-size:12px;color:var(--txt3);padding:8px 0">No results found</div>';return;}
+  el.innerHTML=results.map((r,i)=>`<div class="sr-item" data-i="${i}"><div class="sr-ref">${r.ref}</div><div class="sr-txt">${hlKw(r.text.slice(0,110)+(r.text.length>110?'…':''),kw)}</div><div class="sr-tr">${r.trans}</div></div>`).join('');
+  el.onclick=e=>{const it=e.target.closest('.sr-item');if(it)onSelect(results[+it.dataset.i]);};
+}
+
+// ═══ QUEUE ═══
+function addToQueue(inp){
+  const r=parseQR(inp);if(!r)return false;
+  r.trans=state.live.trans;r.lbl=fmtRef(r.book,r.ch,r.vs,r.ve);
+  state.queue.items.push(r);saveApp();renderQueue('q-list');renderQueue('rem-q-list');return true;
+}
+function renderQueue(id){
+  const el=document.getElementById(id);if(!el)return;
+  if(!state.queue.items.length){el.innerHTML='<div style="font-size:12px;color:var(--txt3);padding:5px 0">Queue is empty</div>';return;}
+  el.innerHTML=state.queue.items.map((it,i)=>`<div class="qi${i===state.queue.idx?' on':''}" data-qi="${i}"><div class="qi-ref">${it.lbl}</div><div class="qi-tr">${it.trans||''}</div><button style="background:none;border:none;color:var(--txt3);cursor:pointer;font-size:11px;padding:2px 4px" data-qu="${i}">↑</button><button style="background:none;border:none;color:var(--txt3);cursor:pointer;font-size:11px;padding:2px 4px" data-qd="${i}">↓</button><button style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;padding:2px 4px" data-qr="${i}">✕</button></div>`).join('');
+  el.onclick=e=>{
+    if(e.target.dataset.qr!==undefined){const i=+e.target.dataset.qr;state.queue.items.splice(i,1);if(state.queue.idx>=state.queue.items.length)state.queue.idx--;saveApp();renderQueue(id);return;}
+    if(e.target.dataset.qu!==undefined){const i=+e.target.dataset.qu;if(i>0){[state.queue.items[i],state.queue.items[i-1]]=[state.queue.items[i-1],state.queue.items[i]];saveApp();renderQueue(id);}return;}
+    if(e.target.dataset.qd!==undefined){const i=+e.target.dataset.qd;if(i<state.queue.items.length-1){[state.queue.items[i],state.queue.items[i+1]]=[state.queue.items[i+1],state.queue.items[i]];saveApp();renderQueue(id);}return;}
+    const qi=e.target.closest('.qi');if(!qi)return;
+    const i=+qi.dataset.qi;state.queue.idx=i;
+    const it=state.queue.items[i];
+    goLive(it.book,it.ch,it.vs,it.ve,it.trans);
+    renderQueue(id);
+  };
+}
+
+// ═══ EXPORT/IMPORT ═══
+async function exportSettings(){
+ try{
+  const data={format:'AltarWordBackup',version:2,bibles:translations,live:{...state.live,settings:state.settings},operator:{queue:state.queue,ui:state.ui,nav:state.nav}};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='AltarWord-Complete-Backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }catch(e){alert('Backup failed: '+e.message);}
+}
+async function importSettings(file){
+ try{
+  const data=JSON.parse(await file.text());
+  if(!data||!data.bibles||!data.live)throw Error('Not an AltarWord backup');
+  await new Promise((resolve,reject)=>{const tx=db.transaction('trans','readwrite');const obj=tx.objectStore('trans');obj.clear();Object.values(data.bibles).forEach(t=>obj.put(t));tx.oncomplete=resolve;tx.onerror=reject;});
+  Object.keys(translations).forEach(k=>delete translations[k]);Object.assign(translations,data.bibles);
+  if(data.operator?.queue)state.queue=data.operator.queue;if(data.operator?.ui)state.ui=data.operator.ui;if(data.operator?.nav)state.nav=data.operator.nav;
+  state.settings=ensureProfiles({...DEF_S,...(data.live.settings||{})});onSync(data.live);saveS();saveApp();renderQueue('q-list');syncUIFromState();publishTransList();broadcast({...state.live});
+  alert('Backup restored.');
+ }catch(e){alert('Restore could not finish: '+e.message);}
+}
+
+// ═══ ONBOARDING ═══
+const OB=[
+  {icon:'📖',title:'Welcome to AltarWord',txt:'Your scripture display tool for church services. Let\'s get you set up.'},
+  {icon:'📁',title:'Load Your Translations',txt:'Click "Load Bible File" to add your Bible XML files. They\'re saved automatically — you only need to do this once.'},
+  {icon:'🖥️',title:'Set Up OBS',txt:'Add a Browser Source in OBS. URL: path to AltarWord.html?mode=display. Width: 1920, Height: 1080.'},
+  {icon:'📱',title:'Phone Remote',txt:'Run Start-Windows.bat on your laptop. The phone URL will appear in the console. Open it in Chrome on your phone.'},
+  {icon:'✝️',title:'You\'re Ready',txt:'Type "jn 3 16" in Quick Reference and press Enter. The selected passage goes live immediately. God bless your service!'},
+];
+let obStep=0;
+function showOB(){document.getElementById('ob-ov').classList.remove('hidden');renderOB(0);}
+function renderOB(step){
+  obStep=step;const d=OB[step];
+  document.getElementById('ob-icon').textContent=d.icon;document.getElementById('ob-title').textContent=d.title;document.getElementById('ob-txt').textContent=d.txt;
+  document.getElementById('ob-next').textContent=step<OB.length-1?'Next →':'Get Started ✓';
+  document.getElementById('ob-dots').innerHTML=OB.map((_,i)=>`<div class="ob-dot${i===step?' on':''}"></div>`).join('');
+}
+function closeOB(){document.getElementById('ob-ov').classList.add('hidden');localStorage.setItem('aw_ob','1');}
+
+// ═══ MODAL HELPERS ═══
+function modal(id,show){document.getElementById(id).classList.toggle('hidden',!show);}
+function mPair(openId,mid,closeId,onOpen){
+  document.getElementById(openId)?.addEventListener('click',()=>{modal(mid,true);if(onOpen)onOpen();});
+  document.getElementById(closeId)?.addEventListener('click',()=>modal(mid,false));
+  document.getElementById(mid)?.addEventListener('click',e=>{if(e.target===document.getElementById(mid))modal(mid,false);});
+}
+
+// ═══ REMOTE ═══
+function applyToRemote(d){
+  Object.assign(state.live,d);updateSHBtn();
+  const rr=document.getElementById('rem-ref');const rt=document.getElementById('rem-vt');const rtr=document.getElementById('rem-tr');
+  if(rr)rr.textContent=d.refText||fmtRef(d.book,d.ch,d.vs,d.ve);
+  // Use verse text from payload — works even without translation files on phone
+  if(rt)rt.textContent=d.verseText||(translations[d.trans]?getVerses(d.trans,d.book,d.ch,d.vs,d.ve).map(v=>v.t).join(' '):'Receiving…');
+  if(rtr)rtr.textContent=d.trans;
+}
+function initRemote(){
+  try{const s=localStorage.getItem('aw_live');if(s)applyToRemote(JSON.parse(s));}catch(e){}
+  document.querySelectorAll('.rem-tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.rem-tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.rem-pane').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');document.getElementById(`rp-${t.dataset.rt}`)?.classList.add('on');
+  }));
+  document.getElementById('rem-prev')?.addEventListener('click',()=>{prevVerse();broadcast({...state.live});});
+  document.getElementById('rem-next')?.addEventListener('click',()=>{nextVerse();broadcast({...state.live});});
+  document.getElementById('rem-sh')?.addEventListener('click',()=>{toggleVisible();broadcast({...state.live});});
+  const remQR=document.getElementById('rem-qr');
+  const doRemQR=()=>{
+    const r=parseQR(remQR?.value);
+    const pr=document.getElementById('rem-prev-ref');const pt=document.getElementById('rem-prev-txt');
+    if(r){
+      if(pr)pr.textContent=fmtRef(r.book,r.ch,r.vs,r.ve);
+      if(pt&&translations[state.live.trans]){const vv=getVerses(state.live.trans,r.book,r.ch,r.vs,r.ve);pt.textContent=vv.map(v=>v.t).join(' ')||'Verse not found';}
+      state.nav.book=r.book;state.nav.ch=r.ch;
+      Object.assign(state.live,r);state.live.visible=true;
+      broadcast({...state.live});updateSHBtn();saveApp();
+    }else{if(pt)pt.textContent='No match found';}
+  };
+  document.getElementById('rem-qr-go')?.addEventListener('click',doRemQR);
+  remQR?.addEventListener('keydown',e=>{if(e.key==='Enter')doRemQR();});
+  document.getElementById('rem-push')?.addEventListener('click',()=>{state.live.visible=true;broadcast({...state.live});updateSHBtn();});
+  document.getElementById('rem-s-go')?.addEventListener('click',()=>{
+    const kw=document.getElementById('rem-s-inp')?.value;if(!kw)return;
+    renderSearch(searchBible(kw,30),kw,'rem-s-results',r=>{goLive(r.book,r.ch,r.vs,r.ve,r.trans);broadcast({...state.live});});
+  });
+  document.getElementById('rem-s-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('rem-s-go')?.click();});
+  document.getElementById('rem-q-go')?.addEventListener('click',()=>{if(addToQueue(document.getElementById('rem-q-add')?.value))document.getElementById('rem-q-add').value='';});
+  renderQueue('rem-q-list');
+  renderTC('rem-tc-main',state.live.trans,a=>{state.live.trans=a;broadcast({...state.live});});
+  const rpt=document.getElementById('rem-par-tog');
+  if(rpt){rpt.className='tog'+(state.live.parOn?' on':'');
+    document.getElementById('rem-par-tog-wrap')?.addEventListener('click',()=>{
+      state.live.parOn=!state.live.parOn;rpt.className='tog'+(state.live.parOn?' on':'');
+      document.getElementById('rem-par-wrap')?.classList.toggle('hidden',!state.live.parOn);
+      broadcast({...state.live});
+    });
+  }
+  renderTC('rem-tc-par',state.live.parTrans,a=>{state.live.parTrans=a;broadcast({...state.live});});
+}
+
+// ═══ CONTROLLER EVENTS ═══
+function initCtrl(){
+ document.querySelectorAll('input[type=range]').forEach(e=>{e.addEventListener('pointerdown',()=>rangeEditing=true);e.addEventListener('change',()=>{rangeEditing=false;clearTimeout(settingsTimer);readUI();});});
+ document.addEventListener('pointerup',()=>{rangeEditing=false;});
+  // Load translations
+  document.getElementById('btn-load-trans')?.addEventListener('click',()=>document.getElementById('file-trans')?.click());
+  document.getElementById('file-trans')?.addEventListener('change',async e=>{
+    for(const f of e.target.files){
+      try{
+        const txt=await f.text();const p=parseBible(txt,f.name);
+        translations[p.abbrev]=p;
+        await dbPut({abbrev:p.abbrev,translation:p.translation,data:p.data});
+        if(!state.live.trans)state.live.trans=p.abbrev;
+        refreshAllTC();populateCh();renderCV();publishTransList();
+      }catch(x){alert(`Error: ${x.message}`);}
+    }e.target.value='';
+  });
+  // Nav selectors
+  document.getElementById('sel-book')?.addEventListener('change',e=>{
+    state.nav.book=+e.target.value;state.nav.ch=1;populateCh();populateVs();renderCV();saveApp();
+  });
+  document.getElementById('sel-ch')?.addEventListener('change',e=>{
+    state.nav.ch=+e.target.value;populateVs();renderCV();saveApp();
+  });
+  // Verse range selectors — keep end ≥ start
+  document.getElementById('sel-vs')?.addEventListener('change',e=>{
+    const ve=document.getElementById('sel-ve');if(ve&&+ve.value<+e.target.value)ve.value=e.target.value;
+  });
+  document.getElementById('sel-ve')?.addEventListener('change',e=>{
+    const vs=document.getElementById('sel-vs');if(vs&&+vs.value>+e.target.value)vs.value=e.target.value;
+  });
+  // Go Live button (nav range)
+  document.getElementById('nav-go')?.addEventListener('click',()=>{
+    const vs=+document.getElementById('sel-vs')?.value||1;
+    const ve=+document.getElementById('sel-ve')?.value||vs;
+    goLive(state.nav.book,state.nav.ch,vs,Math.max(vs,ve),state.live.trans);
+  });
+  // Chapter view buttons
+  document.getElementById('cv-prev-ch')?.addEventListener('click',()=>navigateCV('pc'));
+  document.getElementById('cv-next-ch')?.addEventListener('click',()=>navigateCV('nc'));
+  // Quick reference — Enter goes live
+  const qr=document.getElementById('qr-inp');
+  const doQR=()=>{
+    const r=parseQR(qr?.value);
+    if(!r){alert('No match found. Try: jn 3 16 or jn 3');return;}
+    state.nav.book=r.book;state.nav.ch=r.ch;syncNavSels();renderCV();
+    if(!r.chapterOnly)goLive(r.book,r.ch,r.vs,r.ve,state.live.trans);
+  };
+  document.getElementById('qr-go')?.addEventListener('click',doQR);
+  qr?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doQR();}});
+  // Toolbar
+  document.getElementById('btn-sh')?.addEventListener('click',toggleVisible);
+  document.getElementById('btn-prev')?.addEventListener('click',prevVerse);
+  document.getElementById('btn-next')?.addEventListener('click',nextVerse);
+  // Copy
+  document.getElementById('btn-copy')?.addEventListener('click',()=>{
+    const{book,ch,vs,ve,trans}=state.live;const vv=getVerses(trans,book,ch,vs,ve);
+    const txt=`${vv.map(v=>v.t).join(' ')} — ${fmtRef(book,ch,vs,ve)} (${trans})`;
+    navigator.clipboard.writeText(txt).then(()=>{const b=document.getElementById('btn-copy');if(b){b.textContent='✅ Copied!';setTimeout(()=>b.textContent='📋 Copy Verse',2000);}});
+  });
+  // Parallel
+  document.getElementById('par-wrap')?.addEventListener('click',()=>{
+    state.live.parOn=!state.live.parOn;document.getElementById('par-tog').className='tog'+(state.live.parOn?' on':'');
+    const s=document.getElementById('par-sel');if(s)s.style.display=state.live.parOn?'block':'none';
+    broadcast({...state.live});saveApp();
+  });
+  document.getElementById('par-sel')?.addEventListener('change',e=>{state.live.parTrans=e.target.value;broadcast({...state.live});saveApp();});
+  // Theme toggle
+  document.getElementById('btn-theme')?.addEventListener('click',()=>{
+    state.ui.theme=state.ui.theme==='dark'?'light':'dark';document.body.classList.toggle('light',state.ui.theme==='light');
+    document.getElementById('btn-theme').textContent=state.ui.theme==='dark'?'☀️':'🌙';saveApp();
+  });
+  // ── SINGLE DELEGATED HANDLER for right panel (fixes double-click) ──
+  const rightPanel=document.getElementById('ctrl-right');
+  if(rightPanel){
+    rightPanel.addEventListener('click',e=>{
+      const ct=e.target.closest('[data-ct]');
+      if(ct){saveS();applyProfile(ct.dataset.ct);return;}
+      const ds=e.target.closest('[data-ds]');
+      if(ds){state.settings.displayStyle=ds.dataset.ds;setA('[data-ds]',ds.dataset.ds,'ds');saveS();broadcast({...state.live});return;}
+      const sm=e.target.closest('[data-sm]');
+      if(sm){state.settings.screenMode=sm.dataset.sm;setA('[data-sm]',sm.dataset.sm,'sm');saveS();broadcast({...state.live});return;}
+      const st=e.target.closest('[data-st]');
+      if(st){selectSettingsPane(st.dataset.st);return;}
+      const ta=e.target.closest('[data-ta]');if(ta){state.settings.tabAlign=ta.dataset.ta;setA('[data-ta]',ta.dataset.ta,'ta');saveS();broadcast({...state.live});return;}
+      const va=e.target.closest('[data-va]');if(va){state.settings.vAlign=va.dataset.va;setA('[data-va]',va.dataset.va,'va');saveS();broadcast({...state.live});return;}
+      const tra=e.target.closest('[data-tra]');if(tra){state.settings.trAlign=tra.dataset.tra;setA('[data-tra]',tra.dataset.tra,'tra');saveS();broadcast({...state.live});return;}
+      const bs=e.target.closest('[data-bs]');if(bs){state.settings.borderStyle=bs.dataset.bs;setA('[data-bs]',bs.dataset.bs,'bs');saveS();broadcast({...state.live});return;}
+      const pad=e.target.closest('[data-pad]');if(pad){state.settings.padding=pad.dataset.pad;setA('[data-pad]',pad.dataset.pad,'pad');saveS();broadcast({...state.live});return;}
+      const bg=e.target.closest('[data-bg]');if(bg){state.settings.bgType=bg.dataset.bg;setA('[data-bg]',bg.dataset.bg,'bg');showBgCtrl(bg.dataset.bg);saveS();broadcast({...state.live});return;}
+      const an=e.target.closest('[data-an]');if(an){state.settings.animation=an.dataset.an;setA('[data-an]',an.dataset.an,'an');saveS();broadcast({...state.live});return;}
+      if(e.target.closest('#shadow-wrap')){state.settings.textShadow=!state.settings.textShadow;document.getElementById('tog-shadow').className='tog'+(state.settings.textShadow?' on':'');saveS();broadcast({...state.live});return;}
+      const th=e.target.closest('.tcard');if(th){applyTheme(th.dataset.th);renderThemes();return;}
+      if(e.target.id==='btn-bgimg'){document.getElementById('file-bgimg')?.click();return;}
+    });
+  }
+  // Input/range handlers (not click-based)
+  ['portraitMode', 'portraitFont', 'portraitMargin', 'portraitBottom', 'portraitHeight','c-tab-bg','c-tab-txt','c-v-txt','c-tr-txt','c-bg','c-g1','c-g2','c-border','s-tab-font','s-tab-size','s-tab-wt','s-v-font','s-v-size','s-v-wt','s-v-ls','s-tr-font','s-tr-size','s-safe','s-gdir'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input',readUI);document.getElementById(id)?.addEventListener('change',readUI);
+  });
+  document.getElementById('rng-op')?.addEventListener('input',()=>{const l=document.getElementById('op-lbl');if(l)l.textContent=document.getElementById('rng-op').value+'%';readUI();});
+  document.getElementById('rng-prs-ref')?.addEventListener('input',()=>{
+    const v=+document.getElementById('rng-prs-ref').value;state.settings.presRefSize=v;
+    const l=document.getElementById('prs-ref-lbl');if(l)l.textContent=v+'px';saveS();broadcast({...state.live});broadcast({...state.live});
+  });
+  document.getElementById('rng-prs-verse')?.addEventListener('input',()=>{
+    const v=+document.getElementById('rng-prs-verse').value;state.settings.presVerseMax=v;
+    const l=document.getElementById('prs-verse-lbl');if(l)l.textContent=v+'px';saveS();broadcast({...state.live});
+  });
+  document.getElementById('file-bgimg')?.addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;if(!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>4000000){alert('Choose a PNG, JPG or WebP image under 4 MB.');return;}const fr=new FileReader();fr.onload=ev=>{state.settings.bgImg=ev.target.result;const p=document.getElementById('bgimg-prev');if(p)p.innerHTML='<img src="'+ev.target.result+'" style="width:100%;height:60px;object-fit:cover">';saveS();broadcast({...state.live});};fr.readAsDataURL(f);
+  });
+  // Modals
+  mPair('btn-search','m-search','mc-search',()=>{document.getElementById('s-inp')?.focus();document.getElementById('s-results').innerHTML='';});
+  mPair('btn-queue','m-queue','mc-queue',()=>{renderQueue('q-list');const qn=document.getElementById('q-name');if(qn)qn.value=state.queue.name;});
+  mPair('btn-firebase','m-firebase','mc-firebase',()=>{const fc=state.fbConfig||{};sv('fb-key',fc.apiKey||'');sv('fb-url',fc.databaseURL||'');sv('fb-pid',fc.projectId||'');sv('fb-auth',fc.authDomain||'');});
+  mPair('btn-about','m-about','mc-about');
+  // Remote setup modal
+  document.getElementById('btn-remote')?.addEventListener('click',()=>{
+    const hasFB=!!state.fbConfig;
+    document.getElementById('remote-no-fb')?.classList.toggle('hidden',hasFB);
+    document.getElementById('remote-has-fb')?.classList.toggle('hidden',!hasFB);
+    // Pre-fill saved base URL
+    const saved=localStorage.getItem('aw_remote_base')||'https://eoye24.github.io/altarword/';
+    const inp=document.getElementById('rem-ip');if(inp&&!inp.value)inp.value=saved;
+    modal('m-remote',true);
+  });
+  document.getElementById('mc-remote')?.addEventListener('click',()=>modal('m-remote',false));
+  document.getElementById('m-remote')?.addEventListener('click',e=>{if(e.target===document.getElementById('m-remote'))modal('m-remote',false);});
+  document.getElementById('gen-qr')?.addEventListener('click',()=>{
+    let base=(document.getElementById('rem-ip')?.value||'').trim();
+    if(!base){alert('Enter your GitHub Pages URL (e.g. https://username.github.io/altarword/)');return;}
+    // GitHub Pages can point at the project root or directly at AltarWordRemote.html.
+    if(!base.endsWith('.html')){base=base.replace(/\/$/,'')+'/';}
+    try{localStorage.setItem('aw_remote_base',base);}catch(e){}
+    const cfg=state.fbConfig;if(!cfg){alert('Firebase not configured — click 🔗 first');return;}
+    const u=new URL(base);
+    if(!u.pathname.endsWith('.html'))u.pathname=u.pathname.replace(/\/$/,'')+'/AltarWordRemote.html';
+    u.search='';
+    u.search=new URLSearchParams({fk:cfg.apiKey||'',fu:cfg.databaseURL||'',fp:cfg.projectId||'',fa:cfg.authDomain||''}).toString();u.hash='';
+    const url=u.href;
+    document.getElementById('remote-qr-wrap')?.classList.remove('hidden');
+    document.getElementById('remote-url-txt').textContent=url;
+    const qrEl=document.getElementById('qr-code');
+    qrEl.innerHTML='';
+    if(typeof QRCode!=='undefined'){
+      new QRCode(qrEl,{text:url,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+    }else{
+      qrEl.innerHTML='<div style="color:var(--danger);font-size:12px;padding:8px">QR library not loaded. Copy the URL below instead.</div>';
+    }
+  });
+  document.getElementById('copy-remote-url')?.addEventListener('click',()=>{
+    const url=document.getElementById('remote-url-txt')?.textContent;
+    if(url)navigator.clipboard.writeText(url).then(()=>{
+      const b=document.getElementById('copy-remote-url');
+      if(b){b.textContent='✅ Copied!';setTimeout(()=>{b.textContent='📋 Copy URL';},2000);}
+    });
+  });
+  document.getElementById('mc-obs')?.addEventListener('click',()=>modal('m-obs',false));
+  document.getElementById('m-obs')?.addEventListener('click',e=>{if(e.target===document.getElementById('m-obs'))modal('m-obs',false);});
+  // Search
+  document.getElementById('s-go')?.addEventListener('click',()=>{
+    const kw=document.getElementById('s-inp')?.value;if(!kw)return;
+    renderSearch(searchBible(kw),kw,'s-results',r=>{state.nav.book=r.book;state.nav.ch=r.ch;goLive(r.book,r.ch,r.vs,r.ve,r.trans);modal('m-search',false);});
+  });
+  document.getElementById('s-inp')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('s-go')?.click();});
+  // Queue
+  document.getElementById('q-en-wrap')?.addEventListener('click',()=>{state.queue.enabled=!state.queue.enabled;document.getElementById('q-en-tog').className='tog'+(state.queue.enabled?' on':'');saveApp();});
+  document.getElementById('q-add-go')?.addEventListener('click',()=>{if(addToQueue(document.getElementById('q-add')?.value))document.getElementById('q-add').value='';else alert('No match found');});
+  document.getElementById('q-add')?.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('q-add-go')?.click();});
+  document.getElementById('q-save')?.addEventListener('click',()=>{state.queue.name=document.getElementById('q-name')?.value||state.queue.name;saveApp();modal('m-queue',false);});
+  document.getElementById('q-clear')?.addEventListener('click',()=>{if(confirm('Clear all?')){state.queue.items=[];state.queue.idx=-1;saveApp();renderQueue('q-list');}});
+  // Firebase
+  document.getElementById('fb-save')?.addEventListener('click',async()=>{
+    const cfg={apiKey:gv('fb-key'),databaseURL:gv('fb-url'),projectId:gv('fb-pid'),authDomain:gv('fb-auth')};
+    const st=document.getElementById('fb-status');if(st)st.textContent='Connecting…';
+    const ok=await initFB(cfg,true);
+    if(ok){state.fbConfig=cfg;saveApp();if(st)st.textContent='Connected!';refreshHostedLinks();setTimeout(()=>modal('m-firebase',false),1000);}
+    else{if(st)st.textContent='❌ Failed. Check config.';}
+  });
+  document.getElementById('fb-skip')?.addEventListener('click',()=>modal('m-firebase',false));
+  document.getElementById('mc-firebase')?.addEventListener('click',()=>modal('m-firebase',false));
+  // About
+  document.getElementById('btn-ob-again')?.addEventListener('click',()=>{modal('m-about',false);showOB();});
+  document.getElementById('btn-obs-guide')?.addEventListener('click',()=>{modal('m-about',false);modal('m-obs',true);});
+  // Export/Import
+  document.getElementById('btn-export')?.addEventListener('click',exportSettings);
+  document.getElementById('btn-import')?.addEventListener('click',()=>document.getElementById('file-import')?.click());
+  document.getElementById('file-import')?.addEventListener('change',e=>{if(e.target.files[0])importSettings(e.target.files[0]);e.target.value='';});
+  // Onboarding
+  document.getElementById('ob-next')?.addEventListener('click',()=>obStep<OB.length-1?renderOB(obStep+1):closeOB());
+  document.getElementById('ob-skip')?.addEventListener('click',closeOB);
+  // Keyboard shortcuts
+  document.addEventListener('keydown',e=>{
+    const tag=e.target.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+    if(e.key===' '){e.preventDefault();toggleVisible();}
+    if(e.key==='ArrowUp'){e.preventDefault();navigateCV('pv');}
+    if(e.key==='ArrowDown'){e.preventDefault();navigateCV('nv');}
+    if(e.key==='ArrowLeft'){e.preventDefault();navigateCV('pc');}
+    if(e.key==='ArrowRight'){e.preventDefault();navigateCV('nc');}
+    if((e.ctrlKey||e.metaKey)&&e.key==='f'){e.preventDefault();modal('m-search',true);document.getElementById('s-inp')?.focus();}
+  });
+}
+
+// ═══ HOSTED URL HELPERS ═══
+function getFirebaseCfgFromURL(){
+  const p=new URLSearchParams(location.search);
+  const fk=p.get('fk'),fu=p.get('fu');
+  if(!fk||!fu)return null;
+  return{apiKey:fk,databaseURL:fu,projectId:p.get('fp')||'',authDomain:p.get('fa')||''};
+}
+function configuredURL(kind='controller',baseOverride=''){
+  const cfg=state.fbConfig;if(!cfg?.apiKey||!cfg.databaseURL)return '';
+  let base;
+  try{
+    if(baseOverride)base=new URL(baseOverride,location.href);
+    else base=new URL(location.href);
+  }catch(e){return '';}
+  base.hash='';base.search='';
+  if(kind==='remote'){
+    if(base.pathname.endsWith('/AltarWord.html'))base.pathname=base.pathname.replace('/AltarWord.html','/AltarWordRemote.html');
+    else if(!base.pathname.endsWith('/AltarWordRemote.html'))base.pathname=base.pathname.replace(/\/$/,'')+'/AltarWordRemote.html';
+  }else{
+    if(base.pathname.endsWith('/AltarWordRemote.html'))base.pathname=base.pathname.replace('/AltarWordRemote.html','/AltarWord.html');
+    else if(!base.pathname.endsWith('/AltarWord.html'))base.pathname=base.pathname.replace(/\/$/,'')+'/AltarWord.html';
+  }
+  const q=new URLSearchParams({fk:cfg.apiKey,fu:cfg.databaseURL,fp:cfg.projectId||'',fa:cfg.authDomain||''});
+  if(kind==='display')q.set('mode','display');
+  if(kind==='vertical')q.set('mode','vertical');
+  base.search=q.toString();return base.href;
+}
+function refreshHostedLinks(){
+  const box=document.getElementById('ft-links');if(!box)return;
+  if(!state.fbConfig?.databaseURL){box.innerHTML='<span style="color:var(--txt3)">Save Firebase first to generate the OBS and remote links.</span>';return;}
+  const base=(document.getElementById('cloud-remote-base')?.value||localStorage.getItem('aw_hosted_remote')||location.href).trim();
+  const rows=[['Controller',configuredURL('controller',base)],['Display',configuredURL('display',base)],['Vertical',configuredURL('vertical',base)],['Remote',configuredURL('remote',base)]];
+  box.textContent='';
+  rows.forEach(([label,url])=>{const row=document.createElement('div');const strong=document.createElement('strong');strong.textContent=label+': ';row.append(strong);const a=document.createElement('a');a.href=url;a.textContent=url;a.target='_blank';a.style.color='var(--gold)';row.append(a);box.append(row);});
+}
+function brandMarkup(){return '';}
+function syncBrandControls(){}
+async function initEnhancements(){
+  const input=document.getElementById('cloud-remote-base');
+  if(input){
+    const defaultBase=location.origin+location.pathname.replace(/AltarWord(?:Remote)?\.html.*$/,'');
+    input.value=localStorage.getItem('aw_hosted_remote')||defaultBase;
+  }
+  document.getElementById('cloud-remote-link')?.addEventListener('click',()=>{
+    try{
+      if(!state.fbConfig?.databaseURL)throw Error('Save Firebase using 🔗 first.');
+      const base=(input?.value||'').trim();if(!base)throw Error('Enter your GitHub Pages base URL.');
+      const u=new URL(base);if(u.protocol!=='https:')throw Error('Use the HTTPS GitHub Pages address.');
+      localStorage.setItem('aw_hosted_remote',base);refreshHostedLinks();
+      const remoteURL=configuredURL('remote',base);
+      const out=document.getElementById('cloud-remote-out');if(out){out.innerHTML='';const a=document.createElement('a');a.href=remoteURL;a.textContent='Open configured remote';a.target='_blank';a.style.color='var(--gold)';out.append(a);const d=document.createElement('div');d.textContent=remoteURL;out.append(d);}
+    }catch(e){alert(e.message);}
+  });
+  refreshHostedLinks();refreshConnection();
+}
+
+// ═══ INIT ═══
+async function init(){
+  const m=mode();
+  const modeMap={controller:'ctrl',display:'disp',remote:'rem'};
+  ['ctrl','disp','rem'].forEach(id=>document.getElementById(id)?.classList.toggle('hidden',id!==modeMap[m]));
+  if(m==='display'){document.body.style.background='transparent';document.body.style.overflow='hidden';}
+  await openDB();
+  // Load translations from cache FIRST
+  const cached=await dbAll();
+  cached.forEach(t=>{if(t&&t.abbrev&&t.data)translations[t.abbrev]=t;});
+  // Then load app state
+  state.settings=loadS();
+  loadApp();
+  // Ensure live.trans points to a real loaded translation
+  if(state.live.trans&&!translations[state.live.trans]){
+    const first=Object.keys(translations)[0]||'';
+    state.live.trans=first;
+  }
+  if(!state.live.trans){
+    const first=Object.keys(translations)[0]||'';
+    state.live.trans=first;
+  }
+  document.body.classList.toggle('light',state.ui.theme==='light');
+  initBC();
+  const urlCfg=getFirebaseCfgFromURL();
+  if(urlCfg){state.fbConfig=urlCfg;saveApp();}
+  const activeCfg=urlCfg||state.fbConfig;
+  if(m==='controller'){
+    if(activeCfg)await initFB(activeCfg);initWS();
+    populateBooks();populateCh();populateVs();
+    refreshAllTC();  // render translation chips AND populate par-sel
+    renderRecent();applyProfile(customTarget,false);syncUIFromState();applyProfile(customTarget,false);updateSHBtn();
+    renderCV();      // render chapter view with loaded translations
+    initCtrl();
+    if(!localStorage.getItem('aw_ob'))showOB();
+  }else if(m==='display'){
+    if(activeCfg)await initFB(activeCfg);initWS();
+    try{const s=localStorage.getItem('aw_live');if(s)renderDisp(JSON.parse(s));}catch(e){}
+    // Listen for font size changes from remote — re-scale without full re-render
+    if(fbDB){
+      fbDB.ref('altarword/settings').on('value',snap=>{
+        const d=snap.val();if(!d||d.presVerseMax===undefined)return;
+        state.settings.presVerseMax=d.presVerseMax;saveS();
+        autoScalePres(); // re-scale existing text, no re-render
+      });
+    }
+  }else if(m==='remote'){
+    // Read Firebase config from URL params (injected by QR code generator)
+    const fbCfg=activeCfg;
+    if(fbCfg)await initFB(fbCfg);initWS();
+    initRemote();
+  }
+  console.log(`AltarWord v1.0.0 — ${m}`);
+}
+window.addEventListener('DOMContentLoaded',()=>init().then(initEnhancements).catch(console.error));
+</script>
+</body>
+</html>

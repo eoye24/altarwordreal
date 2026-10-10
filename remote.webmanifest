@@ -1,0 +1,34 @@
+{
+  "name": "AltarWord Remote",
+  "short_name": "AltarWord",
+  "description": "Remote scripture control for AltarWord OBS",
+  "start_url": "./AltarWordRemote.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0a10",
+  "theme_color": "#0a0a10",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "./altarword-remote",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "categories": [
+    "productivity",
+    "utilities"
+  ]
+}
