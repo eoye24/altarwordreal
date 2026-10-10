@@ -1,4 +1,4 @@
-const CACHE='altarword-remote-v9-qr-pwa-fix';
+const CACHE='altarword-remote-v11-status-cleanup';
 const CORE=[
   './',
   './index.html',

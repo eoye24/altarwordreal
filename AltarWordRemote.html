@@ -117,7 +117,10 @@ body{font-family:var(--ui);background:var(--bg);color:var(--txt);display:flex;fl
   <span class="logo">Faith &amp; Truth</span>
   <div class="conn-wrap">
     <div class="conn" id="conn"></div>
-    <span class="conn-lbl" id="conn-lbl">…</span>
+    <div class="conn-stack">
+      <span class="conn-lbl" id="conn-lbl">…</span>
+      <span class="conn-aux" id="conn-aux"></span>
+    </div>
   </div>
 </div>
 
@@ -215,10 +218,6 @@ body{font-family:var(--ui);background:var(--bg);color:var(--txt);display:flex;fl
 
 <div id="toast"></div>
 
-<div style="font-size:11px;color:#aaa;text-align:center;padding:6px">
-  <div id="auto-detail">Firebase internet bridge</div>
-  <div id="offline-detail">Preparing app cache…</div>
-</div>
 <script>
 'use strict';
 const BOOKS=['','Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
@@ -283,6 +282,12 @@ function setConn(ok,lbl){
   document.getElementById('conn').className='conn'+(ok?' ok':' err');
   document.getElementById('conn-lbl').textContent=lbl;
 }
+function setAux(msg=''){
+  const el=document.getElementById('conn-aux');
+  if(!el)return;
+  if(msg){el.textContent=msg;el.classList.add('show');}
+  else {el.textContent='';el.classList.remove('show');}
+}
 
 // ── LIVE ──
 function onLive(d){
@@ -306,8 +311,6 @@ function onLive(d){
     document.querySelectorAll('.cv-item').forEach(el=>{
       const v=+el.dataset.v;el.classList.toggle('live',v>=d.vs&&v<=d.ve);
     });
-    const lv=document.querySelector('.cv-item.live');
-    if(lv)lv.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   renderTransList();
 }
@@ -442,8 +445,6 @@ function renderChapterView(){
     sendLive({book,ch,vs:+it.dataset.v,ve:+it.dataset.v,visible:true});
   };
   setTimeout(()=>{
-    const lv=list.querySelector('.cv-item.live');
-    if(lv)lv.scrollIntoView({behavior:'smooth',block:'center'});
   },80);
 }
 
@@ -583,27 +584,22 @@ function refreshRemoteConnection(){
   if(host)setConn(true,'Firebase');
   else if(cloudReady)setConn(false,'Controller offline');
   else setConn(false,'Offline');
-  const status=document.getElementById('auto-detail');
-  if(status)status.textContent=host?'Connected through Firebase':cloudReady?'Firebase connected · waiting for OBS controller':'No Firebase connection';
+
 }
 async function prepareOffline(){
- const badge=document.getElementById('offline-detail');
- if(!('serviceWorker' in navigator)||location.protocol!=='https:'){if(badge)badge.textContent='PWA install unavailable in this browser';return;}
+ const canSW=('serviceWorker' in navigator)&&location.protocol==='https:';
+ if(!canSW){setAux('PWA install unavailable');return;}
  try{
-   if(badge)badge.textContent='Preparing app cache…';
-   const reg=await navigator.serviceWorker.register('./remote-sw.js',{scope:'./'});
-   const ready = await Promise.race([
+   await navigator.serviceWorker.register('./remote-sw.js',{scope:'./'});
+   await Promise.race([
      navigator.serviceWorker.ready,
      new Promise((_,reject)=>setTimeout(()=>reject(new Error('service worker timeout')),8000))
    ]);
-   reg.update().catch(()=>{});
-   setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
-   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
-   if(badge)badge.textContent='PWA ready · internet required for Firebase';
+   setAux('');
  }
  catch(e){
    console.error('PWA setup:',e);
-   if(badge)badge.textContent='PWA cache unavailable · remote still works online';
+   setAux('PWA cache unavailable');
  }
 }
 window.addEventListener('DOMContentLoaded',()=>{
