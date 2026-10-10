@@ -2,7 +2,7 @@
   "name": "AltarWord Remote",
   "short_name": "AltarWord",
   "description": "Remote scripture control for AltarWord OBS",
-  "start_url": "./",
+  "start_url": "./AltarWordRemote.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0a0a10",

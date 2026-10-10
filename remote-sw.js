@@ -1,5 +1,5 @@
-const CACHE='altarword-remote-v5';
-const CORE=['./','./index.html','./AltarWordRemote.html','./remote.webmanifest','./bootstrap.js','./icon-192.png','./icon-512.png','./vendor/fonts.css'];
+const CACHE='altarword-remote-v7-hosted-firebase';
+const CORE=['./','./index.html','./AltarWordRemote.html','./AltarWord.html','./remote.webmanifest','./icon-192.png','./icon-512.png','./vendor/fonts.css'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));
 });
