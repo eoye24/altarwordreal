@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="remote.webmanifest">
 <link rel="stylesheet" href="vendor/fonts.css">
+<script src="bootstrap.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -453,7 +454,7 @@ function requestChapter(book,ch){
   setTimeout(()=>{
     if(!document.getElementById('ch-loading')?.classList.contains('hidden')){
       document.getElementById('ch-loading')?.classList.add('hidden');
-      document.getElementById('ch-list').innerHTML='<div style="padding:16px;font-size:13px;color:var(--txt3)">Chapter view needs the updated AltarWord.html on the laptop.</div>';
+      document.getElementById('ch-list').innerHTML='<div style="padding:16px;font-size:13px;color:var(--txt3)">Waiting for chapter data from the host laptop…</div>';
     }
   },9000);
 }
@@ -610,9 +611,19 @@ function init(){
 // Paired local transport for the existing phone interface.
 const suppliedParams=new URLSearchParams((location.hash||'').slice(1)||location.search);
 let storedPair={};try{storedPair=JSON.parse(localStorage.getItem('aw_remote_pairing')||'{}');}catch(e){}
-const remoteParams=suppliedParams.has('key')||suppliedParams.has('fu')?suppliedParams:new URLSearchParams(storedPair);
+const boot=globalThis.ALTARWORD_BOOTSTRAP||null;
+const bootParams=new URLSearchParams();
+if(boot){
+  if(boot.key)bootParams.set('key',boot.key);
+  if(boot.firebase?.apiKey)bootParams.set('fk',boot.firebase.apiKey);
+  if(boot.firebase?.databaseURL)bootParams.set('fu',boot.firebase.databaseURL);
+  if(boot.firebase?.projectId)bootParams.set('fp',boot.firebase.projectId);
+  if(boot.firebase?.authDomain)bootParams.set('fa',boot.firebase.authDomain);
+  if(Array.isArray(boot.lan))bootParams.set('lan',JSON.stringify(boot.lan));
+}
+const remoteParams=(suppliedParams.has('key')||suppliedParams.has('fu'))?suppliedParams:(Object.keys(storedPair).length?new URLSearchParams(storedPair):bootParams);
 const localKey=remoteParams.get('key')||'';
-if(remoteParams.has('lan'))localStorage.setItem('aw_remote_pairing',JSON.stringify(Object.fromEntries(remoteParams)));
+if(remoteParams.has('key')||remoteParams.has('fu')||remoteParams.has('lan'))localStorage.setItem('aw_remote_pairing',JSON.stringify(Object.fromEntries(remoteParams)));
 let pendingCloudLive=null;
 let localAddresses=[],activeLocal='',cloudHeartbeat=null,cloudClockOffset=0,activeRoute='';
 const fixedLocal=localStorage.getItem('aw_fixed_local_origin')||'';
