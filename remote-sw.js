@@ -1,4 +1,4 @@
-const CACHE='altarword-remote-v11-status-cleanup';
+const CACHE='altarword-remote-v12-queue-update';
 const CORE=[
   './',
   './index.html',
