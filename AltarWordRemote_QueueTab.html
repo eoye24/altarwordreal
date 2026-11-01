@@ -349,7 +349,7 @@ function sendLive(update,historyAction){
     const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
     const req={id,update,historyAction,issuedAt:Date.now()};
     await cloudPut('altarword/remote/commands/'+id,req);
-    const deadline=Date.now()+7000;
+    const deadline=Date.now()+12000;
     while(Date.now()<deadline){
       await new Promise(r=>setTimeout(r,300));
       const a=await cloudGet('altarword/remote/acks/'+id).catch(()=>null);
@@ -366,17 +366,26 @@ function updateSHBtn(on){
 
 // ── NAVIGATION ──
 function upVerse(){
-  const{book,ch,vs}=S.live;
-  if(vs<=1){toast('First verse');return;}
-  sendLive({book,ch,vs:vs-1,ve:vs-1,visible:true},'navigation');
+  // Navigation is calculated by OBS using the latest live verse, not the remote's cached state.
+  sendNavigation('previous');
 }
 function downVerse(){
-  const{book,ch,vs,ve}=S.live;
-  const source=(S.chapter.book===book&&S.chapter.ch===ch?S.chapter.verses:null);
-  const chVv=source?Object.keys(source).map(Number):null;
-  const maxV=chVv?Math.max(...chVv):176;
-  if(ve>=maxV){toast('Last verse');return;}
-  sendLive({book,ch,vs:ve+1,ve:ve+1,visible:true},'navigation');
+  sendNavigation('next');
+}
+function sendNavigation(direction){
+  if(!cloudReady){toast('Firebase is offline');return;}
+  if(!cloudUsable()){toast('OBS controller is not online');return;}
+  remoteWrites=remoteWrites.then(async()=>{
+    const id='n'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+    await cloudPut('altarword/remote/commands/'+id,{id,navigation:direction,issuedAt:Date.now()});
+    const deadline=Date.now()+12000;
+    while(Date.now()<deadline){
+      await new Promise(r=>setTimeout(r,350));
+      const ack=await cloudGet('altarword/remote/acks/'+id).catch(()=>null);
+      if(ack){cloudDelete('altarword/remote/acks/'+id).catch(()=>{});if(ack.ok)return;throw Error(ack.error||'Navigation rejected');}
+    }
+    throw Error('OBS did not confirm navigation. Check the displayed verse before trying again.');
+  }).catch(e=>{refreshRemoteConnection();toast(e.message);});
 }
 
 // ── UTILS ──
