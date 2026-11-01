@@ -114,7 +114,7 @@ body{font-family:var(--ui);background:var(--bg);color:var(--txt);display:flex;fl
 
 <!-- HEADER: logo + connection -->
 <div class="hd">
-  <span class="logo">Faith &amp; Truth</span>
+  <span class="logo">AltarWord</span><label style="font-size:10px;display:flex;align-items:center;gap:4px;margin-left:8px;white-space:nowrap;color:var(--txt2)" title="Abbreviate book names"><input type="checkbox" id="aw-r-abbrev" onchange="awRSetAbbrev(this.checked)" style="accent-color:var(--gold)"> Abbrev.</label>
   <div class="conn-wrap">
     <div class="conn" id="conn"></div>
     <span class="conn-lbl" id="conn-lbl">…</span>
@@ -219,10 +219,7 @@ body{font-family:var(--ui);background:var(--bg);color:var(--txt);display:flex;fl
 
 <div id="toast"></div>
 
-<div style="font-size:11px;color:#aaa;text-align:center;padding:6px">
-  <div id="auto-detail">Firebase internet bridge</div>
-  <div id="offline-detail">Preparing app cache…</div>
-</div>
+
 <script>
 'use strict';
 const BOOKS=['','Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
@@ -292,7 +289,7 @@ function renderRemoteQueue(){
  if(!items.length){box.textContent='Queue is empty, or the OBS dock has not published it yet.';return;}
  items.forEach((it,i)=>{
   const b=document.createElement('button');b.className='hist-item';b.style.cssText='width:100%;text-align:left;cursor:pointer';
-  const title=document.createElement('div');title.className='hist-ref';title.textContent=(i+1)+'. '+(it.label||fmtRef(it.book,it.ch,it.vs,it.ve));
+  const title=document.createElement('div');title.className='hist-ref';title.textContent=(i+1)+'. '+(awRAbbrev?fmtRef(it.book,it.ch,it.vs,it.ve):(it.label||fmtRef(it.book,it.ch,it.vs,it.ve)));
   const preview=document.createElement('div');preview.className='hist-txt';preview.textContent=it.snippet||'Preview unavailable';
   b.append(title,preview);b.addEventListener('click',()=>{
    if(!cloudUsable()){toast('OBS controller is offline');return;}
@@ -341,22 +338,33 @@ function historyForUpdate(p,previous){
   if(rows.some(r=>r.book===item.book&&r.ch===item.ch&&r.trans===item.trans))return rows;
   return [item,...rows].slice(0,40);
 }
+function awBackgroundAck(id){
+  // Status is advisory, not a prerequisite for the next operator action.
+  (async()=>{
+    const until=Date.now()+3500;
+    while(Date.now()<until){
+      await new Promise(resolve=>setTimeout(resolve,200));
+      let ack=null;
+      try{ack=await cloudGet('altarword/remote/acks/'+id);}catch(e){continue;}
+      if(ack){cloudDelete('altarword/remote/acks/'+id).catch(()=>{});if(ack.ok===false)toast(ack.error||'OBS rejected command');return;}
+    }
+    // Avoid claiming failure: OBS may already have applied the command.
+    refreshRemoteConnection();
+  })();
+}
+function awDispatch(req){
+  if(!cloudReady){toast('Firebase is offline');return;}
+  if(!cloudUsable()){toast('OBS controller is not online');return;}
+  // Only network sends are serialized. Confirmation is checked independently.
+  remoteWrites=remoteWrites.catch(()=>{}).then(async()=>{
+    await cloudPut('altarword/remote/commands/'+req.id,req);
+    awBackgroundAck(req.id);
+  }).catch(e=>{refreshRemoteConnection();toast('Command not sent: '+e.message);});
+}
 function sendLive(update,historyAction){
   historyAction=historyAction||(['book','ch','vs','ve'].some(k=>Object.hasOwn(update,k))?'direct':'status');
-  if(!cloudReady){toast('Firebase is offline');return;}
-  if(!cloudUsable()){toast('AltarWord controller is not online');return;}
-  remoteWrites=remoteWrites.then(async()=>{
-    const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
-    const req={id,update,historyAction,issuedAt:Date.now()};
-    await cloudPut('altarword/remote/commands/'+id,req);
-    const deadline=Date.now()+12000;
-    while(Date.now()<deadline){
-      await new Promise(r=>setTimeout(r,300));
-      const a=await cloudGet('altarword/remote/acks/'+id).catch(()=>null);
-      if(a){cloudDelete('altarword/remote/acks/'+id);if(a.ok)return;throw Error(a.error||'Command rejected');}
-    }
-    throw Error('No confirmation from AltarWord controller');
-  }).catch(e=>{refreshRemoteConnection();toast(e.message);});
+  const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+  awDispatch({id,update,historyAction,issuedAt:Date.now()});
 }
 
 function updateSHBtn(on){
@@ -373,19 +381,8 @@ function downVerse(){
   sendNavigation('next');
 }
 function sendNavigation(direction){
-  if(!cloudReady){toast('Firebase is offline');return;}
-  if(!cloudUsable()){toast('OBS controller is not online');return;}
-  remoteWrites=remoteWrites.then(async()=>{
-    const id='n'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
-    await cloudPut('altarword/remote/commands/'+id,{id,navigation:direction,issuedAt:Date.now()});
-    const deadline=Date.now()+12000;
-    while(Date.now()<deadline){
-      await new Promise(r=>setTimeout(r,350));
-      const ack=await cloudGet('altarword/remote/acks/'+id).catch(()=>null);
-      if(ack){cloudDelete('altarword/remote/acks/'+id).catch(()=>{});if(ack.ok)return;throw Error(ack.error||'Navigation rejected');}
-    }
-    throw Error('OBS did not confirm navigation. Check the displayed verse before trying again.');
-  }).catch(e=>{refreshRemoteConnection();toast(e.message);});
+  const id='n'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+  awDispatch({id,navigation:direction,issuedAt:Date.now()});
 }
 
 // ── UTILS ──
@@ -403,7 +400,11 @@ function parseQR(inp){
   if(nums.length===1)return{book:bookNum,ch:nums[0],vs:1,ve:1,chapterOnly:true};
   return{book:bookNum,ch:nums[0],vs:nums[1],ve:nums[2]||nums[1],chapterOnly:false};
 }
-function fmtRef(bn,cn,vs,ve){const b=BOOKS[bn]||'';return vs===ve?`${b} ${cn}:${vs}`:`${b} ${cn}:${vs}–${ve}`;}
+let awRAbbrev=localStorage.getItem('aw_remote_abbrev')==='1';
+function awRBookName(bn){const b=BOOKS[bn]||'';if(!awRAbbrev)return b;const m=b.match(/^(\d+\s+)?(.*)$/);return (m?.[1]||'')+(m?.[2]||b).slice(0,4);}
+function awRSetAbbrev(v){awRAbbrev=!!v;localStorage.setItem('aw_remote_abbrev',awRAbbrev?'1':'0');renderRemoteQueue();if(typeof S!=='undefined'&&S.live)onLive({...S.live});}
+function fmtRef(bn,cn,vs,ve){const b=awRBookName(bn);return vs===ve?`${b} ${cn}:${vs}`:`${b} ${cn}:${vs}–${ve}`;}
+
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function hlKw(txt,kw){
   if(!kw)return esc(txt);
@@ -564,6 +565,7 @@ function switchTab(id){
 function init(){
   loadHistory();renderHistory();
   initFB();
+  const ab=document.getElementById('aw-r-abbrev');if(ab)ab.checked=awRAbbrev;
 
   // Controls
   document.getElementById('btn-sh').addEventListener('click',()=>sendLive({visible:!S.live.visible}));
